@@ -1,0 +1,33 @@
+/* Responsive refinements for very narrow phones (320px) and large screens */
+@media (max-width: 359px) {
+  :root { --pad: 12px; --card-p: 14px; }
+  .t-hero { font-size: 1.75rem; }
+  .hero-top { gap: 14px; }
+  .home-hero { padding: 18px 16px; }
+  .ac-hero, .lvl-hero, .disc-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .ac-hero .ring, .lvl-hero .ring, .disc-hero .ring { align-self: center; }
+  .wallet { padding: 20px 16px 16px; }
+  .wallet-foot { gap: 18px; }
+  .spend-row { flex-direction: column; align-items: flex-start; }
+  .page-head { flex-wrap: wrap; }
+  .game-grid { gap: 10px; }
+  .tab { font-size: 0.64rem; }
+  .btn { padding: 0 16px; }
+  .page-head-actions .btn { padding: 0 12px; }
+}
+@media (max-width: 479px) {
+  .page-head { align-items: center; }
+  .page-head .t-body { max-width: 100%; }
+  .sheet-foot .btn { padding: 0 14px; }
+  .disc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .row { gap: 12px; }
+}
+@media (min-width: 720px) {
+  .home-hero { padding: 28px; }
+  .quick-row { max-width: 520px; }
+  .ac-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .t-hero { font-size: 2.9rem; }
+}
+@media print { .tabbar, .sidebar, .topbar, .toasts { display: none !important; } }

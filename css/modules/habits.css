@@ -1,0 +1,24 @@
+/* Habits: calm and minimal */
+.habit-summary { display: flex; align-items: center; gap: 20px; }
+.habit-card { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.habit-top { display: flex; align-items: center; gap: 12px; }
+.habit-glyph { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; flex: none; font-size: 1.35rem; background: var(--accent-soft); border: 1px solid var(--accent-line); }
+.habit-top .row-main { color: inherit; }
+.habit-top .row-sub { display: flex; align-items: center; gap: 4px; }
+.habit-top .row-sub .i { color: var(--warn); }
+.habit-card.is-done { border-color: var(--accent-line); }
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wd { display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 44px; padding: 4px 0; border-radius: 12px; color: var(--text-3); }
+.wd small { font-size: 0.68rem; font-weight: 650; }
+.wd i { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; color: transparent; transition: all var(--t-med) var(--spring); }
+.wd.is-on i { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.wd.is-today small { color: var(--accent-text); }
+.wd.is-off { opacity: 0.4; }
+.heat { display: flex; flex-direction: column; gap: 6px; }
+.heat-head, .heat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.heat-head span { text-align: center; font-size: 0.7rem; font-weight: 650; color: var(--text-3); }
+.heat-cell { aspect-ratio: 1; max-height: 44px; border-radius: 10px; background: var(--surface-3); transition: transform var(--t-fast) var(--ease), background var(--t-fast); }
+.heat-cell:active { transform: scale(0.9); }
+.heat-cell.is-on { background: var(--accent); }
+.heat-cell.is-off:not(.is-on) { opacity: 0.35; }
+.heat-cell.is-today { box-shadow: 0 0 0 2px var(--accent-line); }

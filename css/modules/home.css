@@ -1,0 +1,18 @@
+/* Home: elegant daily command centre */
+.home-head { padding-bottom: 14px; }
+.home-hero { padding: 22px; position: relative; overflow: hidden; background:
+  radial-gradient(120% 90% at 100% 0%, rgba(var(--accent-rgb), 0.16), transparent 60%),
+  linear-gradient(180deg, var(--surface), var(--surface)); }
+.hero-top { display: flex; align-items: center; gap: 20px; }
+.hero-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hero-week { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.quick-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.quick-row .btn { padding: 0 10px; min-height: 48px; }
+.habit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface-2); font-size: 0.9rem; transition: all var(--t-med) var(--ease); }
+.habit-chip b { font-weight: 560; min-width: 0; }
+.habit-chip:active { transform: scale(0.96); }
+.habit-chip.is-on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
+.row-title.faint, .is-done .row-title { color: var(--text-3); }
+.task-row.is-done .row-title { text-decoration: line-through; text-decoration-color: var(--text-3); }
+button.row-main { background: none; text-align: left; align-items: flex-start; cursor: pointer; }

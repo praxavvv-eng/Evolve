@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-scheme="dark" data-amoled="true">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Evolve</title>
+  <meta name="description" content="A private personal life-management workspace. All data stays in your browser.">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="assets/logo/mark.svg">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+
+  <!-- Apply the saved theme before first paint so there is no flash -->
+  <script>
+    (function () {
+      try {
+        var s = (JSON.parse(localStorage.getItem('evolve_v7_workspace') || localStorage.getItem('evolve_personal_os_v1') || '{}').settings) || {};
+        var r = document.documentElement, theme = s.theme || 'dark';
+        var scheme = theme === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+        r.dataset.scheme = scheme; r.dataset.amoled = String(s.amoled !== false && scheme === 'dark');
+      } catch (e) { /* defaults apply */ }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/navigation.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/modules/home.css">
+  <link rel="stylesheet" href="css/modules/habits.css">
+  <link rel="stylesheet" href="css/modules/academics.css">
+  <link rel="stylesheet" href="css/modules/finance.css">
+  <link rel="stylesheet" href="css/modules/fitness.css">
+  <link rel="stylesheet" href="css/modules/gaming.css">
+  <link rel="stylesheet" href="css/modules/discipline.css">
+  <link rel="stylesheet" href="css/modules/more.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <a class="sr-only" href="#view">Skip to content</a>
+  <div class="app" id="app" data-sidebar="expanded">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+
+    <div class="shell">
+      <header class="topbar" id="topbar">
+        <div class="topbar-start">
+          <button class="icon-btn back-btn" id="backBtn" type="button" data-action="back" aria-label="Back" hidden></button>
+          <img class="topbar-mark" id="topMark" src="assets/logo/mark.svg" alt="" width="30" height="30">
+          <span class="topbar-title" id="topbarTitle"></span>
+        </div>
+        <div class="topbar-end">
+          <button class="search-pill" type="button" data-action="search" aria-label="Search">
+            <span id="searchPillIcon"></span><span>Search</span><kbd>Ctrl K</kbd>
+          </button>
+          <button class="icon-btn is-solid" id="searchIcon" type="button" data-action="search" aria-label="Search"></button>
+          <button class="btn btn-primary btn-sm add-pill" id="addPill" type="button" data-action="quick-add"></button>
+        </div>
+      </header>
+      <div id="banner" class="banner" role="status" hidden></div>
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+
+    <nav class="tabbar glass" id="tabbar" aria-label="Primary"></nav>
+  </div>
+
+  <noscript><p style="padding:24px;font-family:sans-serif">Evolve needs JavaScript to run.</p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+/* Finance: wallet-inspired */
+.wallet { position: relative; overflow: hidden; border-radius: 28px; padding: 24px 22px 20px; color: #f6efe0; display: flex; flex-direction: column; gap: 6px; min-height: 196px;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(235, 208, 150, 0.34), transparent 55%), linear-gradient(140deg, #3b3222 0%, #17130c 52%, #2b2316 100%);
+  border: 1px solid rgba(235, 208, 150, 0.28); box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 240, 200, 0.18); }
+.wallet::before, .wallet::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid rgba(235, 208, 150, 0.12); pointer-events: none; }
+.wallet::before { width: 260px; height: 260px; right: -80px; top: -110px; }
+.wallet::after { width: 180px; height: 180px; right: -30px; top: -60px; }
+.wallet-top { display: flex; justify-content: space-between; align-items: center; color: rgba(246, 239, 224, 0.7); position: relative; z-index: 1; }
+.wallet-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.wallet-amount { font-size: clamp(2.2rem, 9vw, 3rem); font-weight: 650; letter-spacing: -0.04em; line-height: 1.1; margin-top: 6px; position: relative; z-index: 1; overflow-wrap: anywhere; }
+.wallet-foot { display: flex; gap: 28px; margin-top: auto; padding-top: 20px; position: relative; z-index: 1; flex-wrap: wrap; }
+.wallet-foot small { display: block; font-size: 0.72rem; color: rgba(246, 239, 224, 0.6); margin-bottom: 2px; }
+.wallet-foot b { font-size: 1.05rem; font-weight: 620; }
+
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.month-label { flex: 1; text-align: center; font-weight: 650; font-size: 1.05rem; letter-spacing: -0.015em; min-height: 44px; border-radius: var(--r-pill); }
+.month-label:hover { background: var(--surface-2); }
+.spend-row { display: flex; align-items: center; gap: 20px; }
+.spend-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+.spend-legend li { display: flex; align-items: center; gap: 9px; font-size: 0.85rem; }
+.spend-legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.spend-legend span { flex: 1; color: var(--text-2); }
+.spend-legend b { font-weight: 620; }
+.insight-list { display: flex; flex-direction: column; gap: 12px; }
+.insight-list li { font-size: 0.9rem; color: var(--text-2); padding-left: 16px; position: relative; line-height: 1.45; }
+.insight-list li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.insight-list b { color: var(--text); }
+.budget-row { align-items: flex-start; }
+.budget-row .row-main { gap: 8px; }
+.budget-row .icon-btn { margin: -4px -8px -4px 0; }
+.save-card { display: flex; flex-direction: column; gap: 12px; }
+.save-amt { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.03em; }
+.save-amt small { font-size: 0.8rem; font-weight: 500; color: var(--text-3); letter-spacing: 0; }
+.filters { display: flex; flex-direction: column; gap: 10px; }
+.filters-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.filters .seg { align-self: flex-start; }
+.day-head { display: flex; justify-content: space-between; align-items: center; padding: 14px var(--card-p) 8px; font-size: 0.8rem; font-weight: 650; color: var(--text-2); letter-spacing: 0.01em; }
+
+/* Transaction rows: one aligned line, menu attached at the trailing edge */
+.tx-row { padding-right: calc(var(--card-p) - 8px); gap: 4px; }
+.tx-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; align-self: stretch; }
+.tx-ico { background: var(--surface-2); }
+.tx-ico.is-in { color: var(--pos); background: var(--pos-soft); border-color: transparent; }
+.tx-amt { flex: none; min-width: 5.5ch; text-align: right; font-weight: 620; font-size: 0.97rem; letter-spacing: -0.01em; }
+.tx-detail { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.tx-big { font-size: clamp(2rem, 9vw, 2.8rem); font-weight: 650; letter-spacing: -0.04em; line-height: 1.1; }
+.kv { display: flex; flex-direction: column; margin: 0; width: 100%; }
+.kv > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.kv > div:first-child { border-top: 0; }
+.kv dt { color: var(--text-3); font-size: 0.85rem; flex: none; }
+.kv dd { margin: 0; text-align: right; font-weight: 560; min-width: 0; overflow-wrap: anywhere; }

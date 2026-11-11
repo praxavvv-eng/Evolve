@@ -1,0 +1,9 @@
+/* Discipline: quiet, supportive, no alarm colours for setbacks */
+.disc-hero { display: flex; align-items: center; gap: 24px; padding: 22px; background: radial-gradient(100% 120% at 0% 0%, rgba(165, 189, 163, 0.12), transparent 60%), var(--surface); }
+.disc-stats { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ms-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-pill { display: inline-flex; align-items: center; gap: 4px; min-width: 34px; height: 30px; padding: 0 10px; justify-content: center; border-radius: 99px; font-size: 0.78rem; font-weight: 650; background: var(--surface-3); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.ms-pill.is-on { background: var(--accent-soft); color: var(--accent-text); }
+.cal-day.mark-on { background: rgba(var(--accent-rgb), 0.2); color: var(--accent-text); font-weight: 700; }
+.cal-day.mark-slip { background: var(--warn-soft); color: var(--warn); }
+.cal-day.mark-on.is-sel, .cal-day.mark-slip.is-sel { background: var(--accent); color: var(--on-accent); }

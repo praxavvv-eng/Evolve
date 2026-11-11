@@ -1,0 +1,90 @@
+/* ==========================================================================
+   Layout: app shell, top bar, page container, grids.
+   Mobile first. The sidebar appears from 900px; the bottom bar disappears there.
+   ========================================================================== */
+.app { min-height: 100dvh; }
+.shell { min-height: 100dvh; display: flex; flex-direction: column; min-width: 0; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: calc(var(--topbar-h) + var(--safe-t)); padding: var(--safe-t) max(var(--pad), var(--safe-r)) 0 max(var(--pad), var(--safe-l));
+  border-bottom: 1px solid transparent; transition: background var(--t-med), border-color var(--t-med), backdrop-filter var(--t-med);
+}
+.topbar.is-scrolled { background: rgba(var(--bg-rgb), calc(var(--glass-alpha) + 0.12)); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.5); backdrop-filter: blur(var(--glass-blur)) saturate(1.5); border-bottom-color: var(--line); }
+.topbar-start, .topbar-end { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-start { flex: 1; }
+.topbar-mark { width: 30px; height: 30px; border-radius: 9px; flex: none; }
+.topbar-title { font-weight: 650; font-size: 1rem; letter-spacing: -0.01em; opacity: 0; transform: translateY(4px); transition: opacity var(--t-med), transform var(--t-med) var(--ease); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar.is-scrolled .topbar-title { opacity: 1; transform: none; }
+.topbar .back-btn { margin-left: -8px; }
+.search-pill { display: none; align-items: center; gap: 10px; height: 42px; padding: 0 14px; width: min(340px, 36vw); border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); color: var(--text-3); font-size: 0.9rem; transition: border-color var(--t-fast), background var(--t-fast); }
+.search-pill:hover { border-color: var(--line-strong); }
+.search-pill kbd { margin-left: auto; font: 600 0.7rem var(--font); padding: 2px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-3); }
+.add-pill { display: none; }
+
+/* ---------- storage / info banner ---------- */
+.banner { margin: 0 auto 8px; width: calc(100% - var(--pad) * 2); max-width: calc(var(--content-max) - var(--pad) * 2); padding: 12px 14px; border-radius: var(--r-md); background: var(--warn-soft); border: 1px solid rgba(229, 189, 115, 0.28); color: var(--text); display: flex; gap: 10px; align-items: flex-start; font-size: 0.875rem; }
+.banner .i { color: var(--warn); margin-top: 2px; }
+.banner button { margin-left: auto; font-weight: 600; color: var(--accent-text); min-height: 40px; padding: 0 10px; border-radius: 10px; flex: none; }
+.banner.is-info { background: var(--accent-soft); border-color: var(--accent-line); } .banner.is-info .i { color: var(--accent-text); }
+
+/* ---------- page container ---------- */
+.view { width: 100%; max-width: var(--content-max); margin: 0 auto; padding: 4px max(var(--pad), var(--safe-r)) var(--nav-space) max(var(--pad), var(--safe-l)); flex: 1; outline: none; }
+.view.is-entering > * { animation: rise var(--t-slow) var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.view.is-entering.is-detail > * { animation-name: slide-in; }
+
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 6px 0 18px; }
+.page-head .t-title { margin-bottom: 4px; }
+.page-head-actions { display: flex; gap: 8px; flex: none; align-items: center; }
+.eyebrow { font-size: 0.78rem; font-weight: 600; color: var(--text-3); letter-spacing: 0.01em; margin-bottom: 4px; }
+
+/* ---------- grids ---------- */
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack-lg { display: flex; flex-direction: column; gap: 24px; }
+.grid { display: grid; gap: 16px; min-width: 0; }
+.grid > * { min-width: 0; }
+.cols-2 { grid-template-columns: 1fr; }
+.cols-3 { grid-template-columns: 1fr; }
+.auto-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.hscroll { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px var(--pad) 6px; margin-inline: calc(var(--pad) * -1); scrollbar-width: none; }
+.hscroll::-webkit-scrollbar { display: none; }
+.hscroll > * { scroll-snap-align: start; flex: none; }
+.between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row-gap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; } .mt-4 { margin-top: 16px; } .mt-6 { margin-top: 24px; }
+
+.stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat b { font-size: 1.45rem; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.trio .stat b { font-size: clamp(0.95rem, 4.4vw, 1.45rem); white-space: nowrap; }
+.stat span { font-size: 0.75rem; color: var(--text-3); font-weight: 500; }
+
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: var(--card-p) var(--card-p) 6px; }
+.panel-head h2 { font-size: 1.02rem; font-weight: 620; letter-spacing: -0.012em; }
+.panel-head p { font-size: 0.78rem; color: var(--text-3); margin-top: 1px; }
+.panel-body { padding: 4px var(--card-p) var(--card-p); }
+
+@media (min-width: 720px) {
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .split { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+  .hscroll { padding-inline: 0; margin-inline: 0; }
+  .chips { padding-inline: 0; margin-inline: 0; }
+}
+
+/* ---------- desktop shell ---------- */
+@media (min-width: 900px) {
+  :root { --nav-space: 64px; }
+  .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
+  .app[data-sidebar="collapsed"] { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
+  .app { transition: grid-template-columns var(--t-med) var(--ease); }
+  .topbar-mark, .topbar-title-mobile { display: none; }
+  .search-pill, .add-pill { display: inline-flex; }
+  #searchIcon { display: none; }
+  .topbar { padding-inline: var(--pad); }
+  .topbar-title { display: none; }
+  .view { padding-top: 8px; }
+}
+@media (min-width: 1280px) { .view { padding-inline: 48px; } .topbar { padding-inline: 48px; } }

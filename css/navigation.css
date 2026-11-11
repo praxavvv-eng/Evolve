@@ -1,0 +1,67 @@
+/* ==========================================================================
+   Navigation. One information architecture, two presentations:
+   phones get a floating tab bar + Library page; wide screens get a sidebar.
+   ========================================================================== */
+
+/* ---------- bottom tab bar ---------- */
+.tabbar {
+  position: fixed; z-index: 40; left: 50%; bottom: calc(10px + var(--safe-b)); transform: translateX(-50%);
+  width: min(calc(100% - 24px), 460px); height: var(--nav-h); padding: 0 6px; border-radius: 28px;
+  display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
+  box-shadow: var(--shadow-2), var(--highlight);
+}
+.tab {
+  position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--text-3); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.005em; transition: color var(--t-med), transform var(--t-fast) var(--ease);
+}
+.tab:active { transform: scale(0.92); }
+.tab[aria-current="page"] { color: var(--accent-text); }
+.tab .i { transition: transform var(--t-med) var(--spring); }
+.tab[aria-current="page"] .i { transform: translateY(-1px) scale(1.08); }
+.tab-indicator { position: absolute; z-index: 0; top: 8px; bottom: 8px; left: 0; width: var(--w, 0); transform: translateX(var(--x, 0)); border-radius: 20px; background: var(--accent-soft); opacity: var(--o, 0); transition: transform var(--t-med) var(--ease), width var(--t-med) var(--ease), opacity var(--t-med); pointer-events: none; }
+.tab-add { display: grid; place-items: center; height: 100%; z-index: 1; }
+.tab-add .fab { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3); transition: transform var(--t-med) var(--spring); }
+.tab-add:active .fab { transform: scale(0.9) rotate(45deg); }
+
+/* ---------- sidebar ---------- */
+.sidebar { display: none; }
+@media (min-width: 900px) {
+  .tabbar { display: none; }
+  .sidebar {
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100dvh; padding: calc(18px + var(--safe-t)) 14px 14px; gap: 4px;
+    background: rgba(var(--surface-rgb), 0.5); border-right: 1px solid var(--line); overflow: hidden;
+  }
+  .sb-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 18px; min-height: 52px; }
+  .sb-brand img { width: 34px; height: 34px; border-radius: 10px; flex: none; }
+  .sb-brand .spacer { flex: 1; }
+  .sb-scroll { flex: 1; overflow-y: auto; margin: 0 -6px; padding: 0 6px; display: flex; flex-direction: column; gap: 18px; }
+  .sb-group { display: flex; flex-direction: column; gap: 2px; }
+  .sb-label { font-size: 0.68rem; font-weight: 650; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-3); padding: 0 12px 6px; white-space: nowrap; transition: opacity var(--t-med); }
+  .sb-item {
+    display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 12px; border-radius: 13px; color: var(--text-2); font-size: 0.92rem; font-weight: 560; white-space: nowrap;
+    transition: background var(--t-fast), color var(--t-fast);
+  }
+  .sb-item:hover { background: var(--surface-2); color: var(--text); }
+  .sb-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 650; }
+  .sb-item .badge-count { margin-left: auto; font-size: 0.72rem; font-weight: 650; padding: 1px 8px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .sb-foot { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .app[data-sidebar="collapsed"] .sidebar { padding-inline: 12px; }
+  .app[data-sidebar="collapsed"] .sb-label { opacity: 0; height: 0; padding: 0; margin-bottom: -6px; }
+  .app[data-sidebar="collapsed"] .sb-item span:not(.i-wrap), .app[data-sidebar="collapsed"] .sb-item .badge-count { display: none; }
+  .app[data-sidebar="collapsed"] .sb-item { justify-content: center; padding: 0; }
+  .app[data-sidebar="collapsed"] .sb-brand { justify-content: center; padding-inline: 0; flex-direction: column; gap: 8px; }
+  .app[data-sidebar="collapsed"] .sb-brand .spacer { display: none; }
+  .sb-item .i-wrap { display: grid; place-items: center; width: 22px; }
+}
+
+/* ---------- library page (phone destination listing every module once) ---------- */
+.lib-group + .lib-group { margin-top: 22px; }
+.lib-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lib-tile { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--highlight); transition: transform var(--t-fast) var(--ease), border-color var(--t-fast); min-height: 112px; }
+.lib-tile:active { transform: scale(0.97); }
+.lib-tile:hover { border-color: var(--line-strong); }
+.lib-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: var(--accent-text); background: var(--accent-soft); }
+.lib-tile b { font-size: 0.97rem; font-weight: 620; letter-spacing: -0.01em; display: block; }
+.lib-tile small { font-size: 0.78rem; color: var(--text-3); display: block; margin-top: 2px; }
+@media (min-width: 720px) { .lib-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .lib-only { display: none; } }
