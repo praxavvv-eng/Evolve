@@ -68,7 +68,7 @@ export function academicOverview(state) {
   const pending = state.academicItems.filter(x => x.status !== 'Completed' && num(x.progress) < 100);
   const slots = sum(subs, s => s.assignments.total + s.practicals.total + s.other.length) + loose.length;
   const points = sum(subs, s => s.progress * (s.assignments.total + s.practicals.total + s.other.length)) + sum(loose, itemPct);
-  const dated = pending.filter(x => isDateStr(x.due)).sort((a, b) => a.due.localeCompare(b.due));
+  const dated = pending.filter(x => isDateStr(x.due)).sort((a, b) => a.due.localeCompare(b.due) || (a.dueTime || '').localeCompare(b.dueTime || ''));
   return { subs, loose, pending, progress: slots ? Math.min(100, Math.round(points / slots)) : 0, upcoming: dated, completed: state.academicItems.length - pending.length };
 }
 
@@ -132,3 +132,16 @@ export function bestStreak(nf) {
 
 /* ---------------- books ---------------- */
 export const bookProgress = b => (b.status === 'Finished' ? 100 : b.totalPages > 0 ? Math.min(100, Math.round((num(b.currentPage) / b.totalPages) * 100)) : 0);
+
+/* ---------------- games ---------------- */
+/** Playtime progress. Estimated hours (when set) are authoritative; legacy manual progress is kept; otherwise unset (null).
+ *  This is progress against estimated playtime, not story completion. */
+export function gameProgress(g) {
+  const est = num(g.estimatedHours), hours = num(g.hours);
+  if (g.status === 'Completed') return { value: 100, source: 'completed', hours, est };
+  if (est > 0) return { value: clamp((hours / est) * 100), source: 'estimate', hours, est };
+  if (num(g.progress) > 0) return { value: clamp(g.progress), source: 'manual', hours, est: 0 };
+  return { value: null, source: 'unset', hours, est: 0 };
+}
+/** Timed entries sort by time; entries without a time come first (all-day). */
+export const byTime = (a, b) => String(a.dueTime || '').localeCompare(String(b.dueTime || ''));

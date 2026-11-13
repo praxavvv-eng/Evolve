@@ -13,7 +13,11 @@ export function ring({ value = 0, size = 120, stroke = 10, label = '', sub = '',
 }
 
 /** Thin progress bar. */
-export function progressBar(value, cls = '') { return `<div class="bar ${cls}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(clamp(value))}"><span style="--w:${clamp(value).toFixed(1)}%"></span></div>`; }
+export function progressBar(value, cls = '', { pct = false } = {}) {
+  const v = clamp(value);
+  const bar = `<div class="bar ${cls}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(v)}"><span style="--w:${v.toFixed(1)}%"></span></div>`;
+  return pct ? `<div class="bar-wrap">${bar}<b class="bar-pct t-num">${Math.round(v)}%</b></div>` : bar;
+}
 
 /**
  * Vertical bars. items: [{label, value, today?, on?, segments?:[{v,color,name}], title?}]

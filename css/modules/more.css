@@ -69,3 +69,55 @@
 .imp-head { background: var(--surface-2); font-size: 0.72rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
 .imp-row span:not(:first-child) { text-align: right; }
 @media (min-width: 720px) { .set-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 24px; } .set-ctl { flex: none; max-width: 60%; } }
+
+/* ---------- V7.1 Appearance settings ---------- */
+.set-sub { font-size: 0.72rem; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin: 18px 0 10px; }
+.set-sub:first-of-type { margin-top: 6px; }
+.mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 560px) { .mode-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.mode-card { display: flex; flex-direction: column; gap: 10px; padding: 8px 8px 12px; border-radius: 20px; border: 1.5px solid var(--line); background: var(--surface-2); text-align: left; transition: border-color var(--t-med), transform var(--t-fast) var(--ease), box-shadow var(--t-med); }
+.mode-card:hover { border-color: var(--line-strong); }
+.mode-card:active { transform: scale(0.97); }
+.mode-card.is-on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.mode-art { position: relative; display: block; aspect-ratio: 16 / 11; border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.22); }
+.mode-art b { position: absolute; left: 10%; top: 22%; width: 80%; height: 62%; border-radius: 9px; }
+.mode-art em { position: absolute; left: 18%; top: 34%; width: 62%; height: 6px; border-radius: 4px; }
+.mode-art em + em { top: 50%; }
+.mode-art u { position: absolute; right: 16%; bottom: 24%; width: 22%; height: 9px; border-radius: 6px; }
+.mode-art.is-split { display: grid; grid-template-columns: 1fr 1fr; }
+.mode-art.is-split i { position: relative; display: block; }
+.mode-art.is-split i b { left: 20%; width: 80%; }
+.mode-art.is-split i:last-of-type b { left: 0; width: 80%; }
+.mode-label { display: flex; align-items: center; justify-content: space-between; padding: 0 6px; font-weight: 620; font-size: 0.9rem; }
+.mode-card.is-on .mode-label { color: var(--accent-text); }
+
+.accent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.accent-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 6px 10px; border-radius: 18px; border: 1.5px solid transparent; background: var(--surface-2); transition: border-color var(--t-med), background var(--t-med), transform var(--t-fast) var(--ease); }
+.accent-tile:hover { background: var(--surface-3); }
+.accent-tile:active { transform: scale(0.95); }
+.accent-tile b { font-size: 0.78rem; font-weight: 600; color: var(--text-2); }
+.accent-dot { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #0b0b0c; background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.5), transparent 55%), var(--sw); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 6px 14px rgba(0, 0, 0, 0.25); transition: transform var(--t-med) var(--spring); }
+.accent-tile.is-on { border-color: var(--sw); background: color-mix(in srgb, var(--sw) 12%, var(--surface-2)); }
+.accent-tile.is-on .accent-dot { transform: scale(1.1); }
+.accent-tile.is-on b { color: var(--text); }
+.accent-tile.is-custom:not(.is-on) .accent-dot { background: conic-gradient(#d4bc8e, #9dbbd0, #a5bda3, #cda39b, #d39a6e, #d4bc8e); color: #0b0b0c; }
+.accent-tile.is-custom:not(.is-on) .accent-dot .i { background: rgba(255, 255, 255, 0.85); border-radius: 50%; padding: 3px; width: 24px; height: 24px; }
+.custom-picker { display: flex; flex-direction: column; gap: 14px; padding: 16px; margin-top: 12px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--line); animation: rise var(--t-med) var(--ease) both; }
+.custom-picker[hidden] { display: none; }
+.cp-row { display: flex; align-items: center; gap: 12px; }
+.cp-preview { width: 46px; height: 46px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 6px 16px rgba(0, 0, 0, 0.25); }
+.cp-hex { font-family: var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.cp-label { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; font-weight: 600; color: var(--text-2); }
+.cp-range { height: 30px; }
+.cp-range::-webkit-slider-runnable-track { height: 12px; border-radius: 12px; }
+input.cp-range::-webkit-slider-runnable-track { height: 12px; }
+.cp-range::-moz-range-track { height: 12px; border-radius: 12px; }
+.cp-range::-webkit-slider-thumb { margin-top: -6px; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.4); }
+input.cp-range.cp-hue::-webkit-slider-runnable-track { background: linear-gradient(90deg, hsl(0 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(60 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(120 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(180 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(240 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(300 calc(var(--s) * 1%) calc(var(--l) * 1%)), hsl(360 calc(var(--s) * 1%) calc(var(--l) * 1%))); }
+input.cp-range.cp-sat::-webkit-slider-runnable-track { background: linear-gradient(90deg, hsl(var(--h) 0% calc(var(--l) * 1%)), hsl(var(--h) 100% calc(var(--l) * 1%))); }
+input.cp-range.cp-light::-webkit-slider-runnable-track { background: linear-gradient(90deg, hsl(var(--h) calc(var(--s) * 1%) 25%), hsl(var(--h) calc(var(--s) * 1%) 55%), hsl(var(--h) calc(var(--s) * 1%) 85%)); }
+input.cp-range.cp-hue::-moz-range-track { background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+input.cp-range.cp-sat::-moz-range-track { background: linear-gradient(90deg, #888, var(--accent)); }
+input.cp-range.cp-light::-moz-range-track { background: linear-gradient(90deg, #222, var(--accent), #ddd); }
+.accent-preview { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 14px; border-radius: 18px; background: var(--surface-2); border: 1px dashed var(--line-strong); }
+.accent-preview .bar { flex: 1; min-width: 80px; }

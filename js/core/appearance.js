@@ -14,8 +14,11 @@ const hex = rgb => `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`;
 
 export function resolveScheme(s) { return s.theme === 'system' ? (dark.matches ? 'dark' : 'light') : s.theme; }
 
+let firstApply = true;
 export function applyAppearance() {
   const s = State.get().settings, root = document.documentElement;
+  if (!firstApply && root.dataset.motion !== 'reduce') { root.classList.add('theme-anim'); clearTimeout(applyAppearance.t); applyAppearance.t = setTimeout(() => root.classList.remove('theme-anim'), 450); }   // smooth colour cross-fade
+  firstApply = false;
   const scheme = resolveScheme(s);
   root.dataset.scheme = scheme;
   root.dataset.amoled = String(s.amoled && scheme === 'dark');

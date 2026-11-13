@@ -549,9 +549,11 @@ if (topbarEnd && !document.querySelector('[data-action="cloud-open"]')) {
   const button = document.createElement('button');
 
   button.type = 'button';
-  button.className = 'btn btn-sm';
+  button.className = 'icon-btn is-solid';
   button.dataset.action = 'cloud-open';
-  button.textContent = 'Cloud sync';
+  button.setAttribute('aria-label', 'Cloud sync');
+  button.title = 'Cloud sync';
+  button.innerHTML = icon('cloud', { size: 20 });
 
   topbarEnd.append(button);
 }

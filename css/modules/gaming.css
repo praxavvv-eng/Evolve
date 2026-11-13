@@ -30,3 +30,10 @@
 .game-card .rate small { display: none; }
 .game-top .badge { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .game-top .rate { flex: none; }
+
+/* ---------- V7.1 Gaming: clean posters ---------- */
+.game-card { background: #000; border: 0; outline: 0; -webkit-mask-image: -webkit-radial-gradient(white, black); }
+.game-card:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.cover img { border: 0; outline: 0; image-rendering: auto; backface-visibility: hidden; transform: translateZ(0); -webkit-user-drag: none; user-select: none; }
+.gd-cover .cover { border: 0; background-clip: padding-box; }
+.progress-unset { padding: 14px; border-radius: 16px; border: 1.5px dashed var(--line-strong); }

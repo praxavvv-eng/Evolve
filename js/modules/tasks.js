@@ -2,7 +2,7 @@
 import * as State from '../core/state.js';
 import { registerActions, registerChange } from '../core/events.js';
 import { toggleTask } from '../core/records.js';
-import { esc, todayStr, relDay, isDateStr } from '../core/utils.js';
+import { esc, todayStr, relDay, isDateStr, fmtTime } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { pageHead, emptyState, addBtn, kebab, badge } from '../components/ui.js';
 import { selectHTML } from '../components/dropdown.js';
@@ -12,12 +12,12 @@ import { emit } from '../core/events.js';
 
 const ui = { filter: 'open', area: 'All' };
 const PRIORITY_RANK = { High: 0, Medium: 1, Low: 2 };
-const sortTasks = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.title.localeCompare(b.title);
+const sortTasks = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.dueTime || '').localeCompare(b.dueTime || '') || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.title.localeCompare(b.title);
 
 /** One task row; shared with Home. */
 export function taskRow(t, { menu = true } = {}) {
   const today = todayStr(), overdue = !t.done && isDateStr(t.due) && t.due < today;
-  const meta = [t.category, t.due ? relDay(t.due, { done: t.done }) : 'No date', t.repeat && t.repeat !== 'None' ? `Repeats ${t.repeat.toLowerCase()}` : ''].filter(Boolean).join(' · ');
+  const meta = [t.category, t.due ? `${relDay(t.due, { done: t.done })}${t.dueTime ? `, ${fmtTime(t.dueTime)}` : ''}` : 'No date', t.repeat && t.repeat !== 'None' ? `Repeats ${t.repeat.toLowerCase()}` : ''].filter(Boolean).join(' · ');
   return `<div class="row task-row ${t.done ? 'is-done' : ''}">
     <button type="button" class="check-wrap" data-action="task-toggle" data-id="${esc(t.id)}" role="checkbox" aria-checked="${t.done}" aria-label="${t.done ? 'Mark as not done' : 'Mark as done'}: ${esc(t.title)}"><span class="check ${t.done ? 'is-on' : ''}">${icon('check', { size: 16 })}</span></button>
     <button type="button" class="row-main" data-action="form" data-type="task" data-id="${esc(t.id)}">

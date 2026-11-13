@@ -61,7 +61,16 @@ function attachDismiss(el, anchor, reposition) {
   return () => { document.removeEventListener('pointerdown', onDown, true); document.removeEventListener('keydown', onKey, true); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onResize); };
 }
 
+/** The screen can re-render while a list is open (state change, sync). Find the live copy of the select if ours was replaced. */
+function liveSelect(select) {
+  if (select.isConnected) return select;
+  const attr = (k, v) => `select[${k}="${CSS.escape(v)}"]`;
+  const q = select.id ? `select#${CSS.escape(select.id)}` : select.name ? attr('name', select.name) : select.dataset.change ? `${attr('data-change', select.dataset.change)}${select.dataset.id ? attr('data-id', select.dataset.id).slice(6) : ''}` : '';
+  return (q && document.querySelector(q)) || select;
+}
 function setValue(select, trigger, opt) {
+  select = liveSelect(select);
+  if (!trigger.isConnected) trigger = select.closest('[data-dd]')?.querySelector('.dd-trigger') || trigger;
   select.value = opt.value;
   trigger.querySelector('.dd-val').textContent = opt.label;
   select.dispatchEvent(new Event('input', { bubbles: true }));

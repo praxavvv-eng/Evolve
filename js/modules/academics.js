@@ -3,7 +3,7 @@
 import * as State from '../core/state.js';
 import { registerActions } from '../core/events.js';
 import { setAcademicProgress, markAttendance } from '../core/records.js';
-import { esc, todayStr, relDay, num, isDateStr, plural } from '../core/utils.js';
+import { esc, todayStr, relDay, num, isDateStr, plural, fmtTime } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { subjectStats, academicOverview } from '../core/stats.js';
 import { ring, progressBar } from '../components/charts.js';
@@ -18,7 +18,7 @@ function itemRow(x, { showSubject = true } = {}) {
   return `<div class="row">
     <button type="button" class="check-wrap" data-action="ac-complete" data-id="${esc(x.id)}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Mark as not completed' : 'Mark as completed'}: ${esc(x.title)}"><span class="check ${done ? 'is-on' : ''}">${icon('check', { size: 16 })}</span></button>
     <button type="button" class="row-main" data-action="form" data-type="academic" data-id="${esc(x.id)}"><span class="row-title trunc">${esc(x.title)}</span>
-      <span class="row-sub trunc ${overdue ? 'neg' : ''}">${esc([showSubject ? x.subject : '', tag, x.due ? relDay(x.due, { done }) : 'No date'].filter(Boolean).join(' · '))}</span>
+      <span class="row-sub trunc ${overdue ? 'neg' : ''}">${esc([showSubject ? x.subject : '', tag, x.due ? `${relDay(x.due, { done })}${x.dueTime ? `, ${fmtTime(x.dueTime)}` : ''}` : 'No date'].filter(Boolean).join(' · '))}</span>
       ${!done && num(x.progress) > 0 ? progressBar(x.progress) : ''}</button>
     <span class="row-end">${kebab('academic', x.id)}</span></div>`;
 }
@@ -32,6 +32,7 @@ function renderOverview() {
   const overdue = ov.pending.filter(x => isDateStr(x.due) && x.due < today).length;
   const card = ({ subject: sub, ...st }) => `<a class="card sub-card lift" href="#/academics/subject/${esc(sub.id)}">
     <div class="between"><div style="min-width:0"><p class="t-micro">${esc(sub.code || 'Subject')}</p><h3 class="t-h2 trunc">${esc(sub.name)}</h3></div>${ring({ value: st.progress, size: 56, stroke: 6, label: pctText(st.progress), title: `${sub.name} progress ${pctText(st.progress)}` })}</div>
+    ${progressBar(st.progress, '', { pct: true })}
     <div class="sub-meta"><span><b>${st.assignments.done}/${st.assignments.total}</b> assignments</span>${st.practicals.total ? `<span><b>${st.practicals.done}/${st.practicals.total}</b> practicals</span>` : ''}<span><b>${st.attendance.rate === null ? '–' : pctText(st.attendance.rate)}</b> attendance</span></div>
     ${st.pending.length ? `<p class="t-small">${plural(st.pending.length, 'item')} pending</p>` : `<p class="t-small pos">${st.items.length ? 'All caught up' : 'No work added yet'}</p>`}</a>`;
   return `${head}<div class="stack-lg">
@@ -57,7 +58,7 @@ function renderSubject(id) {
   if (!sub) return `<div class="card">${emptyState({ icon: 'graduation', title: 'Subject not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/academics">Back to Academics</a>' })}</div>`;
   const st = subjectStats(s, sub), today = todayStr();
   const att = st.attendance;
-  const pending = st.pending.filter(x => isDateStr(x.due)).sort((a, b) => a.due.localeCompare(b.due));
+  const pending = st.pending.filter(x => isDateStr(x.due)).sort((a, b) => a.due.localeCompare(b.due) || (a.dueTime || '').localeCompare(b.dueTime || ''));
   const completed = st.items.filter(x => !st.pending.includes(x));
   return `<header class="page-head"><div style="min-width:0"><p class="eyebrow">${esc(sub.code || 'Subject')}</p><h1 class="t-title trunc">${esc(sub.name)}</h1></div>
       <div class="page-head-actions">${addBtn('subject', 'Edit', { cls: 'btn btn-sm', id: sub.id })}${addBtn('academic', 'Work', { prefill: { subject: sub.name } })}</div></header>
@@ -65,11 +66,11 @@ function renderSubject(id) {
       <section class="card card-pad ac-hero" style="--i:1">${ring({ value: st.progress, size: 112, stroke: 10, label: pctText(st.progress), sub: 'progress' })}
         <div class="ac-hero-stats"><div class="stat"><b>${st.assignments.done}/${st.assignments.total}</b><span>Assignments</span></div><div class="stat"><b>${st.practicals.total ? `${st.practicals.done}/${st.practicals.total}` : '–'}</b><span>Practicals</span></div><div class="stat"><b>${att.rate === null ? '–' : pctText(att.rate)}</b><span>Attendance</span></div><div class="stat"><b>${st.pending.length}</b><span>Pending</span></div></div></section>
 
-      <section class="card card-pad" style="--i:2"><div class="between"><h2 class="t-h2">Assignments</h2><span class="t-small t-num">${pctText(st.assignments.progress)} complete</span></div><div class="mt-3">${slotGrid(st.assignments, sub, 'Assignment', 'assignmentNo')}</div></section>
-      ${st.practicals.slots.length || sub.totalPracticals ? `<section class="card card-pad" style="--i:3"><div class="between"><h2 class="t-h2">Practicals</h2><span class="t-small t-num">${pctText(st.practicals.progress)} complete</span></div><div class="mt-3">${slotGrid(st.practicals, sub, 'Practical', 'practicalNo')}</div></section>` : ''}
+      <section class="card card-pad" style="--i:2"><div class="between"><h2 class="t-h2">Assignments</h2><span class="t-small t-num">${st.assignments.done} of ${st.assignments.total} done</span></div><div class="mt-3">${progressBar(st.assignments.progress, '', { pct: true })}</div><div class="mt-4">${slotGrid(st.assignments, sub, 'Assignment', 'assignmentNo')}</div></section>
+      ${st.practicals.slots.length || sub.totalPracticals ? `<section class="card card-pad" style="--i:3"><div class="between"><h2 class="t-h2">Practicals</h2><span class="t-small t-num">${st.practicals.done} of ${st.practicals.total} done</span></div><div class="mt-3">${progressBar(st.practicals.progress, '', { pct: true })}</div><div class="mt-4">${slotGrid(st.practicals, sub, 'Practical', 'practicalNo')}</div></section>` : ''}
 
       <section class="card card-pad" style="--i:4"><div class="between"><h2 class="t-h2">Attendance</h2><span class="t-small t-num">${att.attended} of ${att.held} classes</span></div>
-        ${att.held ? `<div class="mt-3">${progressBar(att.rate)}</div><p class="t-small mt-2">${pctText(att.rate)} attended</p>` : '<p class="t-body mt-2">No classes recorded yet.</p>'}
+        ${att.held ? `<div class="mt-3">${progressBar(att.rate, '', { pct: true })}</div><p class="t-small mt-2">attended</p>` : '<p class="t-body mt-2">No classes recorded yet.</p>'}
         <div class="attend-actions mt-4"><button class="btn btn-soft" type="button" data-action="attend" data-id="${esc(sub.id)}" data-kind="present">${icon('check', { size: 18 })} Present</button><button class="btn" type="button" data-action="attend" data-id="${esc(sub.id)}" data-kind="absent">${icon('x', { size: 18 })} Absent</button></div>
         ${att.held ? `<div class="row-gap mt-3"><button class="link-btn" type="button" data-action="attend" data-id="${esc(sub.id)}" data-kind="undo-present">Undo a present</button><button class="link-btn" type="button" data-action="attend" data-id="${esc(sub.id)}" data-kind="undo-absent">Undo an absent</button></div>` : ''}</section>
 

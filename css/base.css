@@ -193,3 +193,34 @@ a.row:hover, button.row:hover { background: rgba(255, 255, 255, 0.025); }
 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 28px 0 12px; }
 .sec-head h2 { font-size: 1.15rem; font-weight: 620; letter-spacing: -0.018em; }
 .sec-head p { font-size: 0.8125rem; color: var(--text-3); margin-top: 2px; }
+
+/* ==========================================================================
+   V7.1 refinements: progress, date/time fields, micro-interactions
+   ========================================================================== */
+.bar { height: 8px; border-radius: 99px; background: var(--surface-3); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22); }
+.bar-lg { height: 12px; }
+.bar > span { position: relative; background: linear-gradient(90deg, rgba(var(--mod-rgb), 0.72), rgba(var(--mod-rgb), 1)); box-shadow: 0 0 12px rgba(var(--mod-rgb), 0.35); transition: width 700ms var(--ease); }
+.bar > span::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 65%); }
+.bar.is-warn > span { background: var(--warn); box-shadow: none; } .bar.is-over > span { background: var(--neg); box-shadow: none; } .bar.is-pos > span { background: linear-gradient(90deg, rgba(147, 199, 164, 0.75), var(--pos)); box-shadow: 0 0 12px rgba(147, 199, 164, 0.3); }
+.bar-wrap { display: flex; align-items: center; gap: 12px; }
+.bar-wrap .bar { flex: 1; min-width: 0; }
+.bar-pct { min-width: 3.4ch; text-align: right; font-size: 0.82rem; font-weight: 650; color: var(--text); }
+.ring-fg { filter: drop-shadow(0 0 6px rgba(var(--mod-rgb), 0.35)); }
+.ring { --ring: rgb(var(--mod-rgb)); }
+
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
+.mini-link { font-size: 0.75rem; font-weight: 650; color: var(--accent-text); padding: 2px 4px; border-radius: 6px; }
+.mini-link:hover { text-decoration: underline; }
+.field input[type="date"], .field input[type="time"], .field input[type="month"] { font-variant-numeric: tabular-nums; }
+.field input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.55; cursor: pointer; }
+[data-scheme="dark"] .field input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+.quick-dates { margin-top: 2px; }
+.quick-dates { gap: 6px; }
+.quick-dates button { min-height: 32px; padding: 0 10px; font-size: 0.74rem; background: var(--surface-3); transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast) var(--ease); }
+.quick-dates button:hover { background: var(--accent-soft); color: var(--accent-text); }
+.quick-dates button:active { transform: scale(0.94); }
+
+/* press feedback on tappable rows and cards */
+button.row-main:active, a.row:active, button.row:active { opacity: 0.7; }
+a.card:active, .lib-tile:active { transform: scale(0.985); }
+.card { transition: border-color var(--t-med), box-shadow var(--t-med); }

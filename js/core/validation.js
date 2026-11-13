@@ -1,7 +1,7 @@
 /* Validation + normalization for every record type.
  * prepare(type, raw, {state, existing}) -> { record, errors }. errors is keyed by field name; empty means valid. */
 import { OPTIONS } from './schemas.js';
-import { isDateStr, num, clamp, monthKey } from './utils.js';
+import { isDateStr, isTimeStr, num, clamp, monthKey } from './utils.js';
 
 const str = (v, max = 4000) => String(v ?? '').trim().slice(0, max);
 const int = v => Math.round(num(v));
@@ -14,6 +14,9 @@ function requireDate(raw, field, errors, label = 'a valid date') { if (!isDateSt
 const rules = {
   task(raw) {
     const e = {}, r = { title: str(raw.title, 150), due: dateOrEmpty(raw.due), priority: oneOf(raw.priority, OPTIONS.priority, 'Medium'), category: oneOf(raw.category, OPTIONS.taskCategory, 'Other'), repeat: oneOf(raw.repeat, OPTIONS.repeat, 'None'), notes: str(raw.notes, 1000) };
+    r.dueTime = isTimeStr(raw.dueTime) ? raw.dueTime : '';
+    if (raw.dueTime && !r.dueTime) e.dueTime = 'Enter a valid time.';
+    else if (r.dueTime && !r.due) e.dueTime = 'Choose a date to go with this time.';
     if (!r.title) e.title = 'Give the task a name.';
     return { r, e };
   },
@@ -53,6 +56,9 @@ const rules = {
       else if (state.academicItems.some(x => x.id !== existing?.id && x.type === type && x.subject === r.subject && num(x[field]) === no)) e[field] = `${type} ${no} already exists for ${r.subject}.`;
       if (!r.title && !e[field]) r.title = `${r.subject === 'General' ? '' : `${r.subject} `}${type} ${no}`.trim();
     }
+    r.dueTime = isTimeStr(raw.dueTime) ? raw.dueTime : '';
+    if (raw.dueTime && !r.dueTime) e.dueTime = 'Enter a valid time.';
+    else if (r.dueTime && !r.due) e.dueTime = 'Choose a date to go with this time.';
     if (!r.title) e.title = 'Give this item a title.';
     return { r, e };
   },
@@ -98,8 +104,12 @@ const rules = {
   game(raw) {
     const e = {}, status = oneOf(raw.status, OPTIONS.gameStatus, 'Backlog');
     const rating = raw.rating === '' || raw.rating == null ? '' : clamp(int(raw.rating), 1, 10);
-    const r = { title: str(raw.title, 100), platform: oneOf(raw.platform, OPTIONS.platform, 'Other'), status, hours: Math.max(0, num(raw.hours)), rating: rating === 0 ? '' : rating, progress: status === 'Completed' ? 100 : clamp(raw.progress), cover: typeof raw.cover === 'string' ? raw.cover.slice(0, 200000) : '', notes: str(raw.notes, 1500) };
+    const hours = Math.max(0, num(raw.hours)), est = Math.max(0, num(raw.estimatedHours));
+    /* progress: Completed = 100; estimated hours are authoritative; otherwise keep the manual value */
+    const progress = status === 'Completed' ? 100 : est > 0 ? clamp((hours / est) * 100) : clamp(raw.progress);
+    const r = { title: str(raw.title, 100), platform: oneOf(raw.platform, OPTIONS.platform, 'Other'), status, hours, estimatedHours: est > 0 ? est : '', rating: rating === 0 ? '' : rating, progress, cover: typeof raw.cover === 'string' ? raw.cover.slice(0, 400000) : '', notes: str(raw.notes, 1500) };
     if (!r.title) e.title = 'Enter the game title.';
+    if (raw.estimatedHours !== '' && raw.estimatedHours != null && !(num(raw.estimatedHours) >= 0)) e.estimatedHours = 'Enter hours as a positive number.';
     return { r, e };
   },
   book(raw) {

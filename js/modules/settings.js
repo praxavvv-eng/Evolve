@@ -7,7 +7,7 @@ import { schemas } from '../core/schemas.js';
 import { ACCENTS, freshSettings, freshState, summarize, SCHEMA_VERSION } from '../storage/migration.js';
 import { exportBackupFile, validateBackup } from '../storage/backup.js';
 import { storageEstimate } from '../storage/storage.js';
-import { esc, downloadFile, todayStr, fmtDate, fmtNum } from '../core/utils.js';
+import { esc, downloadFile, todayStr, fmtDate, fmtNum, hexToHsl, hslToHex } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { pageHead } from '../components/ui.js';
 import { selectHTML } from '../components/dropdown.js';
@@ -18,18 +18,41 @@ const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'JPY', 'CAD', 'AUD', 'SGD
 const seg = (key, current, options) => `<div class="seg" role="group" aria-label="${esc(key)}">${options.map(([v, l, ic]) => `<button type="button" class="${String(current) === String(v) ? 'is-on' : ''}" aria-pressed="${String(current) === String(v)}" data-action="set-pref" data-key="${key}" data-value="${v}">${ic ? icon(ic, { size: 16 }) : ''}${l}</button>`).join('')}</div>`;
 const rowSet = (label, hint, control) => `<div class="set-row"><div class="set-label"><b>${esc(label)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</div><div class="set-ctl">${control}</div></div>`;
 
+const ui = { customOpen: false };
+const MODES = [['light', 'Light'], ['dark', 'Dark'], ['amoled', 'AMOLED'], ['system', 'System']];
+const PREVIEW = { light: ['#f3f0ea', '#fffefb', '#1d1b17', 'rgba(40,32,18,.18)'], dark: ['#0f0f11', '#1a1a1e', '#f3eee5', 'rgba(255,255,255,.2)'], amoled: ['#000', '#0e0e10', '#f3eee5', 'rgba(255,255,255,.18)'] };
+function modeCard([id, label], current, accent) {
+  const half = id === 'system';
+  const art = half
+    ? `<span class="mode-art is-split"><i style="background:${PREVIEW.light[0]}"><b style="background:${PREVIEW.light[1]}"></b></i><i style="background:${PREVIEW.dark[0]}"><b style="background:${PREVIEW.dark[1]}"></b></i><u style="background:${accent}"></u></span>`
+    : `<span class="mode-art" style="background:${PREVIEW[id][0]}"><b style="background:${PREVIEW[id][1]}"></b><em style="background:${PREVIEW[id][3]}"></em><em style="background:${PREVIEW[id][3]};width:44%"></em><u style="background:${accent}"></u></span>`;
+  return `<button type="button" class="mode-card ${current === id ? 'is-on' : ''}" role="radio" aria-checked="${current === id}" data-action="set-mode" data-mode="${id}">${art}<span class="mode-label">${label}${current === id ? icon('check', { size: 14 }) : ''}</span></button>`;
+}
+const modeOf = st => (st.theme === 'light' ? 'light' : st.theme === 'system' ? 'system' : st.amoled ? 'amoled' : 'dark');
+
 function render() {
   const s = State.get(), st = s.settings, hex = accentHex(st), kb = Math.round(storageEstimate().bytes / 1024);
   const trash = s.trashBin.slice().sort((a, b) => b.deletedAt.localeCompare(a.deletedAt)).slice(0, 15);
-  const swatches = Object.entries(ACCENTS).map(([id, a]) => `<button type="button" class="swatch ${!st.customAccent && st.accent === id ? 'is-on' : ''}" style="--sw:${a.hex}" data-action="set-accent" data-id="${id}" aria-label="${esc(a.name)}" aria-pressed="${!st.customAccent && st.accent === id}" title="${esc(a.name)}">${!st.customAccent && st.accent === id ? icon('check', { size: 16 }) : ''}</button>`).join('');
+  const mode = modeOf(st), hsl = hexToHsl(hex);
+  const tiles = Object.entries(ACCENTS).map(([id, a]) => `<button type="button" class="accent-tile ${!st.customAccent && st.accent === id ? 'is-on' : ''}" role="radio" aria-checked="${!st.customAccent && st.accent === id}" style="--sw:${a.hex}" data-action="set-accent" data-id="${id}"><span class="accent-dot">${!st.customAccent && st.accent === id ? icon('check', { size: 16 }) : ''}</span><b>${esc(a.name)}</b></button>`).join('');
   const sum = summarize(s);
 
   return `${pageHead({ title: 'Settings' })}
     <div class="stack-lg">
       <section class="card card-pad set-card" style="--i:1"><div class="set-head">${icon('palette', { size: 20 })}<h2 class="t-h2">Appearance</h2></div>
-        ${rowSet('Theme', '', seg('theme', st.theme, [['dark', 'Dark', 'moon'], ['light', 'Light', 'sun'], ['system', 'System', 'monitor']]))}
-        ${rowSet('True black (AMOLED)', 'Deepest dark surfaces. Applies to the dark theme.', `<label class="switch"><input type="checkbox" ${st.amoled ? 'checked' : ''} data-change="set-amoled" aria-label="True black"><span></span></label>`)}
-        ${rowSet('Accent colour', '', `<div class="swatches">${swatches}<label class="swatch swatch-custom ${st.customAccent ? 'is-on' : ''}" title="Custom colour" aria-label="Custom accent colour"><input type="color" value="${esc(hex)}" data-input="set-custom-accent" data-change="set-custom-accent-done"><span>${st.customAccent ? icon('check', { size: 16 }) : icon('plus', { size: 16 })}</span></label></div>`)}
+        <p class="set-sub">Theme</p>
+        <div class="mode-grid" role="radiogroup" aria-label="Theme">${MODES.map(m => modeCard(m, mode, hex)).join('')}</div>
+        ${st.theme === 'system' ? rowSet('True black in dark mode', 'Used when your device is in dark mode.', `<label class="switch"><input type="checkbox" ${st.amoled ? 'checked' : ''} data-change="set-amoled" aria-label="True black in dark mode"><span></span></label>`) : ''}
+        <p class="set-sub">Accent colour</p>
+        <div class="accent-grid" role="radiogroup" aria-label="Accent colour">${tiles}
+          <button type="button" class="accent-tile is-custom ${st.customAccent ? 'is-on' : ''}" role="radio" aria-checked="${Boolean(st.customAccent)}" data-action="custom-toggle" style="--sw:${esc(hex)}"><span class="accent-dot">${st.customAccent ? icon('check', { size: 16 }) : icon('plus', { size: 16 })}</span><b>Custom</b></button></div>
+        <div class="custom-picker" id="custom-picker" ${ui.customOpen ? '' : 'hidden'} style="--h:${hsl[0]};--s:${hsl[1]};--l:${hsl[2]}">
+          <div class="cp-row"><span class="cp-preview" style="background:${esc(hex)}"></span><input class="input cp-hex" maxlength="7" value="${esc(hex.toUpperCase())}" data-input="cp-hex" aria-label="Hex colour" spellcheck="false" autocomplete="off"></div>
+          <label class="cp-label">Hue<input type="range" class="cp-range cp-hue" min="0" max="360" value="${hsl[0]}" data-input="cp-slider" data-k="h" aria-label="Hue"></label>
+          <label class="cp-label">Saturation<input type="range" class="cp-range cp-sat" min="0" max="100" value="${hsl[1]}" data-input="cp-slider" data-k="s" aria-label="Saturation"></label>
+          <label class="cp-label">Lightness<input type="range" class="cp-range cp-light" min="25" max="85" value="${hsl[2]}" data-input="cp-slider" data-k="l" aria-label="Lightness"></label></div>
+        <div class="accent-preview" aria-hidden="true"><span class="btn btn-primary btn-sm">Primary</span><span class="badge badge-accent">Accent</span><div class="bar"><span style="--w:64%"></span></div></div>
+        <p class="set-sub">Interface</p>
         ${rowSet('Glass effect', 'How translucent bars and sheets feel.', `<div class="range-row"><input type="range" min="0" max="100" step="5" value="${st.glass}" style="--p:${st.glass}%" data-input="set-glass" aria-label="Glass intensity"><output>${st.glass}</output></div>`)}
         ${rowSet('Density', '', seg('density', st.density, [['comfortable', 'Comfortable'], ['compact', 'Compact']]))}
         ${rowSet('Text size', '', seg('textSize', st.textSize, [['small', 'Small'], ['default', 'Default'], ['large', 'Large']]))}
@@ -77,6 +100,17 @@ registerActions({
     const v = el.dataset.value; const key = el.dataset.key;
     setSetting({ [key]: key === 'weekStartsMonday' ? v === 'true' : v }); emit('view:refresh');
   },
+  'set-mode'(el) {
+    const m = el.dataset.mode;
+    setSetting(m === 'light' ? { theme: 'light' } : m === 'dark' ? { theme: 'dark', amoled: false } : m === 'amoled' ? { theme: 'dark', amoled: true } : { theme: 'system' });
+    emit('view:refresh');
+  },
+  'custom-toggle'() {
+    ui.customOpen = !ui.customOpen;
+    const st = State.get().settings;
+    if (ui.customOpen && !st.customAccent) setSetting({ customAccent: accentHex(st) });
+    emit('view:refresh');
+  },
   'set-accent'(el) { setSetting({ accent: el.dataset.id, customAccent: '' }); emit('view:refresh'); },
   'reset-appearance'() { const d = freshSettings(); setSetting({ theme: d.theme, amoled: d.amoled, accent: d.accent, customAccent: '', glass: d.glass, density: d.density, textSize: d.textSize, motion: d.motion }); emit('view:refresh'); toast('Appearance restored'); },
   'export-backup'() { exportBackupFile(State.get()); toast('Backup downloaded'); },
@@ -104,7 +138,6 @@ registerChange({
   'set-amoled'(el) { setSetting({ amoled: el.checked }); },
   'set-currency'(el) { setSetting({ currency: el.value }); State.update(() => {}); },
   'set-cap'(el) { setSetting({ dailyXpCap: Number(el.value) }); },
-  'set-custom-accent-done'(el) { setSetting({ customAccent: el.value }); emit('view:refresh'); },
   async 'import-file'(el) {
     const file = el.files[0]; if (!file) return;
     let text;
@@ -116,7 +149,23 @@ registerChange({
 });
 registerInput({
   'set-glass'(el) { el.style.setProperty('--p', `${el.value}%`); el.parentElement.querySelector('output').textContent = el.value; setSetting({ glass: Number(el.value) }); },
-  'set-custom-accent'(el) { setSetting({ customAccent: el.value }); }
+  'cp-slider'(el) {
+    const box = el.closest('.custom-picker');
+    const v = k => Number(box.querySelector(`[data-k="${k}"]`).value);
+    const hexv = hslToHex(v('h'), v('s'), v('l'));
+    box.style.setProperty('--h', v('h')); box.style.setProperty('--s', v('s')); box.style.setProperty('--l', v('l'));
+    box.querySelector('.cp-hex').value = hexv.toUpperCase(); box.querySelector('.cp-preview').style.background = hexv;
+    setSetting({ customAccent: hexv });
+  },
+  'cp-hex'(el) {
+    const raw = el.value.trim().replace(/^#?/, '#');
+    if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
+    const box = el.closest('.custom-picker'), [h, sa, l] = hexToHsl(raw);
+    box.style.setProperty('--h', h); box.style.setProperty('--s', sa); box.style.setProperty('--l', Math.min(85, Math.max(25, l)));
+    box.querySelector('[data-k="h"]').value = h; box.querySelector('[data-k="s"]').value = sa; box.querySelector('[data-k="l"]').value = Math.min(85, Math.max(25, l));
+    box.querySelector('.cp-preview').style.background = raw;
+    setSetting({ customAccent: raw.toLowerCase() });
+  }
 });
 
 export const route = { id: 'settings', render };

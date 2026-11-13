@@ -161,3 +161,18 @@
 .ach-pop b { font-size: 0.97rem; font-weight: 650; letter-spacing: -0.01em; }
 @keyframes ach-in { from { opacity: 0; transform: translate(-50%, -24px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes ach-out { to { opacity: 0; transform: translate(-50%, -16px) scale(0.96); } }
+
+/* ---------- V7.1: form + sheet polish ---------- */
+.sheet { background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, rgba(var(--accent-rgb), 0.08)), var(--surface) 140px); }
+.sheet-foot { background: rgba(var(--surface-rgb), 0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.sheet-head h2 { letter-spacing: -0.025em; }
+.form > .field { animation: rise var(--t-med) var(--ease) both; }
+.form > .field:nth-child(2) { animation-delay: 30ms; } .form > .field:nth-child(3) { animation-delay: 60ms; } .form > .field:nth-child(4) { animation-delay: 90ms; }
+.form > .field:nth-child(5) { animation-delay: 120ms; } .form > .field:nth-child(6) { animation-delay: 150ms; } .form > .field:nth-child(n+7) { animation-delay: 180ms; }
+.field label { transition: color var(--t-fast); }
+.field:focus-within > label, .field:focus-within > .label-row label { color: var(--accent-text); }
+.field-error { animation: rise var(--t-fast) var(--ease) both; }
+.sheet-foot .btn-primary { min-height: 50px; font-size: 1rem; }
+.seg label:has(input:checked), .seg button.is-on { transition: background var(--t-med) var(--ease), box-shadow var(--t-med); }
+.list > .row { animation: fade var(--t-med) var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .form > .field, .list > .row { animation: none; } }

@@ -14,3 +14,8 @@
 .slot.is-done { border-style: solid; border-color: transparent; background: var(--accent); color: var(--on-accent); }
 .slot.is-done b { color: var(--on-accent); }
 .attend-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------- V7.1 Academics: richer progress ---------- */
+.sub-card { background: radial-gradient(90% 70% at 100% 0%, rgba(var(--mod-rgb), 0.10), transparent 60%), var(--surface); }
+.sub-card .bar-wrap { margin-top: -2px; }
+.ac-hero .ring-label b { background: linear-gradient(180deg, var(--text), rgb(var(--mod-rgb))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

@@ -34,10 +34,11 @@ export const schemas = {
     defaults: () => ({ due: todayStr(), priority: 'Medium', category: 'Personal', repeat: 'None' }),
     fields: [
       { name: 'title', label: 'Task', type: 'text', required: true, placeholder: 'What needs doing?', max: 150 },
-      { name: 'due', label: 'Due', type: 'date', half: true },
+      { name: 'due', label: 'Date', type: 'date', half: true, quick: true, clearable: true },
+      { name: 'dueTime', label: 'Time (optional)', type: 'time', half: true, clearable: true },
       { name: 'priority', label: 'Priority', type: 'select', options: OPTIONS.priority, half: true },
       { name: 'category', label: 'Area', type: 'select', options: OPTIONS.taskCategory, half: true },
-      { name: 'repeat', label: 'Repeat', type: 'select', options: OPTIONS.repeat, half: true },
+      { name: 'repeat', label: 'Repeat', type: 'select', options: OPTIONS.repeat },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 1000, placeholder: 'Optional' }
     ]
   },
@@ -74,8 +75,9 @@ export const schemas = {
       { name: 'practicalNo', label: 'Practical no.', type: 'number', min: 1, step: 1, half: true, when: v => v.type === 'Practical' },
       { name: 'title', label: 'Title', type: 'text', max: 150, placeholder: 'Auto-named if left empty', when: v => ['Assignment', 'Practical'].includes(v.type) },
       { name: 'title', label: 'Title', type: 'text', max: 150, required: true, placeholder: 'e.g. Mid-term exam', when: v => !['Assignment', 'Practical'].includes(v.type) },
-      { name: 'due', label: 'Due', type: 'date', half: true },
-      { name: 'status', label: 'Status', type: 'select', options: OPTIONS.academicStatus, half: true },
+      { name: 'due', label: 'Due date', type: 'date', half: true, quick: true, clearable: true },
+      { name: 'dueTime', label: 'Time (optional)', type: 'time', half: true, clearable: true },
+      { name: 'status', label: 'Status', type: 'select', options: OPTIONS.academicStatus },
       { name: 'progress', label: 'Completed', type: 'range', min: 0, max: 100, step: 5, suffix: '%' },
       { name: 'details', label: 'Details', type: 'textarea', rows: 2, max: 1000, placeholder: 'Optional' }
     ]
@@ -155,8 +157,9 @@ export const schemas = {
       { name: 'platform', label: 'Platform', type: 'select', options: OPTIONS.platform, half: true },
       { name: 'status', label: 'Status', type: 'select', options: OPTIONS.gameStatus, half: true },
       { name: 'hours', label: 'Hours played', type: 'number', min: 0, step: 'any', half: true },
-      { name: 'rating', label: 'Rating (1–10)', type: 'number', min: 1, max: 10, step: 1, half: true },
-      { name: 'progress', label: 'Progress', type: 'range', min: 0, max: 100, step: 5, suffix: '%', when: v => v.status !== 'Completed' },
+      { name: 'estimatedHours', label: 'Estimated total hours', type: 'number', min: 0, step: 'any', half: true, placeholder: 'Optional' },
+      { name: 'rating', label: 'Rating (1–10)', type: 'number', min: 1, max: 10, step: 1 },
+      { name: 'progress', label: 'Progress (manual)', type: 'range', min: 0, max: 100, step: 5, suffix: '%', hint: 'Add estimated total hours and progress is calculated from your playtime instead.', when: v => v.status !== 'Completed' && !(Number(v.estimatedHours) > 0) },
       { name: 'cover', label: 'Cover art', type: 'cover', hint: 'Optional. Choose an image from your device; a designed cover is used otherwise.' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 1500, placeholder: 'Optional' }
     ]

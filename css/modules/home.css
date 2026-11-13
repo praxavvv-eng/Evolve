@@ -16,3 +16,18 @@
 .row-title.faint, .is-done .row-title { color: var(--text-3); }
 .task-row.is-done .row-title { text-decoration: line-through; text-decoration-color: var(--text-3); }
 button.row-main { background: none; text-align: left; align-items: flex-start; cursor: pointer; }
+
+/* ---------- V7.1 Home: livelier hero ---------- */
+.home-hero { background:
+  radial-gradient(90% 120% at 100% 0%, rgba(var(--accent-rgb), 0.26), transparent 58%),
+  radial-gradient(70% 90% at 0% 100%, rgba(var(--accent-rgb), 0.10), transparent 60%),
+  var(--surface); border-color: rgba(var(--accent-rgb), 0.22); box-shadow: var(--shadow-2), var(--highlight); }
+.home-hero .ring { --size: 120px !important; filter: drop-shadow(0 8px 22px rgba(var(--accent-rgb), 0.3)); }
+.hero-copy .t-h2 { font-size: 1.3rem; letter-spacing: -0.025em; }
+.hero-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 99px; font-size: 0.78rem; font-weight: 600; background: rgba(var(--accent-rgb), 0.14); color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.quick-row .btn { flex-direction: column; gap: 6px; min-height: 76px; border-radius: 22px; font-size: 0.85rem; background: linear-gradient(180deg, var(--surface-2), var(--surface)); }
+.quick-row .btn .i { color: var(--accent-text); width: 22px; height: 22px; }
+.quick-row .btn:hover { border-color: var(--accent-line); }
+.habit-chip.is-on { box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.16); }
+.home-head .t-hero { background: linear-gradient(180deg, var(--text), color-mix(in srgb, var(--accent-text) 40%, var(--text))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

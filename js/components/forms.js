@@ -7,7 +7,7 @@ import { saveRecord, removeRecord, restoreTrash } from '../core/records.js';
 import { openSheet, confirmDialog } from './modal.js';
 import { selectHTML } from './dropdown.js';
 import { toast } from './toast.js';
-import { esc, currencySymbol, clamp } from '../core/utils.js';
+import { esc, currencySymbol, clamp, addDays, todayStr } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { exerciseSummaries } from '../core/stats.js';
 
@@ -33,7 +33,8 @@ function fieldHTML(f, values, fid, errors) {
   const id = `${fid}-${f.name}`, v = values[f.name] ?? '';
   const err = errors[f.name];
   const cls = `field ${f.half ? 'is-half' : ''} ${f.big ? 'field-big' : ''} ${err ? 'has-error' : ''}`;
-  const label = f.type === 'segmented' || f.type === 'cover' ? `<span class="field-label">${esc(f.label)}</span>` : `<label for="${id}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
+  const labelText = f.type === 'segmented' || f.type === 'cover' ? `<span class="field-label">${esc(f.label)}</span>` : `<label for="${id}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
+  const label = f.clearable ? `<div class="label-row">${labelText}<button type="button" class="mini-link" data-clear="${f.name}" ${v ? '' : 'hidden'}>Clear</button></div>` : labelText;
   let ctl = '';
   switch (f.type) {
     case 'select': {
@@ -64,13 +65,14 @@ function fieldHTML(f, values, fid, errors) {
       const attrs = f.type === 'number' ? `inputmode="decimal" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.max !== undefined ? `max="${f.max}"` : ''} step="${f.step || 'any'}"` : `maxlength="${f.max || 200}"`;
       const input = `<input id="${id}" name="${f.name}" type="${type}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${attrs} autocomplete="off" ${err ? 'aria-invalid="true"' : ''}>`;
       ctl = f.prefix ? `<div class="prefix-wrap"><span class="prefix">${esc(currencySymbol())}</span>${input}</div>` : input;
+      if (f.quick) ctl += `<div class="suggest quick-dates" aria-label="Quick dates">${[['Today', 0], ['Tomorrow', 1], ['+1 week', 7]].map(([l, n]) => `<button type="button" data-quick="${n}">${l}</button>`).join('')}</div>`;
       if (f.suggest === 'exercises') {
         const names = exerciseSummaries(State.get()).slice(0, 6).map(s => s.name);
         if (names.length) ctl += `<div class="suggest" aria-label="Recent exercises">${names.map(n => `<button type="button" data-suggest="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
       }
     }
   }
-  return `<div class="${cls}" data-field="${f.name}" data-key="${f.name}${f.required ? '!' : ''}">${label}${ctl}${f.hint ? `<span class="field-hint">${esc(f.hint)}</span>` : ''}<div class="field-error" role="alert" ${err ? '' : 'hidden'}>${err ? `${icon('alert', { size: 14 })}${esc(err)}` : ''}</div></div>`;
+  return `<div class="${cls}" data-field="${f.name}" data-key="${f.name}${f.required ? '!' : ''}" ${f.when && !f.when(values) ? 'hidden' : ''}>${label}${ctl}${f.hint ? `<span class="field-hint">${esc(f.hint)}</span>` : ''}<div class="field-error" role="alert" ${err ? '' : 'hidden'}>${err ? `${icon('alert', { size: 14 })}${esc(err)}` : ''}</div></div>`;
 }
 
 export function collect(form) {
@@ -83,6 +85,7 @@ export function collect(form) {
 }
 
 /* ---------- image helpers ---------- */
+/** Poster pipeline: centre-crop to 3:4, step-down scaling for sharp results, JPEG sized to stay practical for storage and cloud sync. */
 function readCover(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -91,10 +94,24 @@ function readCover(file) {
       const img = new Image();
       img.onerror = () => reject(new Error('That file is not a usable image.'));
       img.onload = () => {
-        const maxW = 420, maxH = 560, k = Math.min(1, maxW / img.width, maxH / img.height);
-        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.8));
+        const R = 3 / 4;
+        let cw = img.width, ch = cw / R;
+        if (ch > img.height) { ch = img.height; cw = ch * R; }
+        const sx = (img.width - cw) / 2, sy = (img.height - ch) / 2;
+        const outW = Math.min(600, Math.round(cw)), outH = Math.round(outW / R);
+        const make = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; return [c, x]; };
+        let [cur, cx] = make(Math.round(cw), Math.round(ch));
+        cx.drawImage(img, sx, sy, cw, ch, 0, 0, cur.width, cur.height);
+        while (cur.width / 2 >= outW) {                       // halve repeatedly: much sharper than one big jump
+          const [next, nx] = make(Math.floor(cur.width / 2), Math.floor(cur.height / 2));
+          nx.drawImage(cur, 0, 0, next.width, next.height); cur = next;
+        }
+        const [out, ox] = make(outW, outH);
+        ox.fillStyle = '#000'; ox.fillRect(0, 0, outW, outH);
+        ox.drawImage(cur, 0, 0, outW, outH);
+        let q = 0.88, data = out.toDataURL('image/jpeg', q);
+        while (data.length > 150000 && q > 0.62) { q -= 0.06; data = out.toDataURL('image/jpeg', q); }
+        resolve(data);
       };
       img.src = reader.result;
     };
@@ -167,13 +184,19 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
         e.target.style.setProperty('--p', `${((e.target.value - f.min) / (f.max - f.min)) * 100}%`);
         const out = e.target.parentElement.querySelector('output'); if (out) out.textContent = `${e.target.value}${f.suffix || ''}`;
       }
+      if (e.target.matches('input[type=date],input[type=time]')) syncClear(e.target);
       const blk = e.target.closest('[data-field]');
       if (blk?.classList.contains('has-error')) { blk.classList.remove('has-error'); const er = blk.querySelector('.field-error'); er.hidden = true; }
     });
     form.addEventListener('change', e => {
       if (['type', 'status', 'subject'].includes(e.target.name)) { syncVisibility(); if (e.target.name !== 'status') autoNumber(); }
     });
+    const syncClear = el => { const btn = el.closest('[data-field]')?.querySelector('[data-clear]'); if (btn) btn.hidden = !el.value; };
     form.addEventListener('click', e => {
+      const qd = e.target.closest('[data-quick]');
+      if (qd) { const inp = qd.closest('[data-field]').querySelector('input[type=date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); }
+      const cl = e.target.closest('[data-clear]');
+      if (cl) { const inp = cl.closest('[data-field]').querySelector('input'); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); }
       const s = e.target.closest('[data-suggest]');
       if (s) { form.elements.exercise.value = s.dataset.suggest; form.elements.exercise.focus(); }
       if (e.target.closest('[data-cover-clear]')) { form.elements.cover.value = ''; const t = form.querySelector('[data-cover-thumb]'); t.style.backgroundImage = ''; t.innerHTML = icon('image', { size: 20 }); e.target.closest('[data-cover-clear]').hidden = true; }

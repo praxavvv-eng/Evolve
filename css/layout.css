@@ -88,3 +88,11 @@
   .view { padding-top: 8px; }
 }
 @media (min-width: 1280px) { .view { padding-inline: 48px; } .topbar { padding-inline: 48px; } }
+
+/* module glow behind each screen */
+.view { position: relative; isolation: isolate; }
+.view::before { content: ""; position: absolute; z-index: -1; inset: -70px 0 auto; height: 340px; pointer-events: none; background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.17), transparent 72%); }
+[data-scheme="light"] .view::before { background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.12), transparent 72%); }
+.ph-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ph-ico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; color: rgb(var(--mod-rgb)); background: rgba(var(--mod-rgb), 0.14); }
+.page-head h1 { background: linear-gradient(180deg, var(--text), color-mix(in srgb, var(--text) 78%, transparent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

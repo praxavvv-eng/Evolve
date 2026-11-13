@@ -37,6 +37,8 @@ export function render({ forceAnimate = false } = {}) {
   const sel = keep ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
   const scrollY = window.scrollY;
 
+  const prevBars = [...view.querySelectorAll('.bar > span')].map(e => e.style.getPropertyValue('--w'));
+  const prevRings = [...view.querySelectorAll('.ring-fg')].map(e => e.style.getPropertyValue('--p'));
   let html;
   try { html = route.render(parts); } catch (e) { html = errorCard(e, id); }
   view.innerHTML = html;
@@ -49,10 +51,22 @@ export function render({ forceAnimate = false } = {}) {
     window.scrollTo(0, 0);
     if (last) view.focus({ preventScroll: true });
   } else window.scrollTo(0, scrollY);
+  if (!changed) animateFrom(prevBars, prevRings);
   try { route.mount?.(view, parts); } catch (e) { console.error(`[router] mount of "${id}" failed`, e); }
   if (keep) { const el = view.querySelector(`[data-keep="${keep}"]`); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(...sel); } catch { /* not a text field */ } } }
   last = key;
   onRoute({ id, parts, route, changed });
+}
+
+/** After a re-render on the same screen, start bars and rings at their previous value so they glide to the new one. */
+function animateFrom(prevBars, prevRings) {
+  if (document.documentElement.dataset.motion === 'reduce') return;
+  const jobs = [];
+  view.querySelectorAll('.bar > span').forEach((el, i) => { const old = prevBars[i], now = el.style.getPropertyValue('--w'); if (old && old !== now) { el.style.setProperty('--w', old); jobs.push(() => el.style.setProperty('--w', now)); } });
+  view.querySelectorAll('.ring-fg').forEach((el, i) => { const old = prevRings[i], now = el.style.getPropertyValue('--p'); if (old && old !== now) { el.style.setProperty('--p', old); jobs.push(() => el.style.setProperty('--p', now)); } });
+  if (!jobs.length) return;
+  void view.offsetWidth;
+  requestAnimationFrame(() => jobs.forEach(j => j()));
 }
 
 export const rerender = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => render()); };

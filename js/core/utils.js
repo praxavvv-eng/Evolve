@@ -25,6 +25,9 @@ export const fmtDate = (v, o = { day: 'numeric', month: 'short' }) => { const d 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** Compact day + month, e.g. "21 Sep". Fixed names so chart labels never vary by browser locale. */
 export const fmtDM = v => { const d = parseDate(v); return d ? `${d.getDate()} ${MON[d.getMonth()]}` : '—'; };
+/** "16:05" -> "4:05 PM". Empty or invalid input gives an empty string. */
+export const isTimeStr = v => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+export const fmtTime = v => { if (!isTimeStr(v)) return ''; const [h, m] = v.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
 export const fmtLong = (d = new Date()) => d.toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' });
 export const fmtMonth = key => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' }); };
 export const fmtMonthShort = key => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString(LOCALE, { month: 'short' }); };
@@ -94,5 +97,16 @@ export function readableOn(hex) {
   if (!m) return '#0b0b0c';
   const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.42 ? '#0b0b0c' : '#fbf8f2';
+}
+export function hexToHsl(hex) {
+  const [r, g, b] = hexToRgb(hex).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  let h = 0, s = 0;
+  if (d) { s = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = Math.round(h * 60); if (h < 0) h += 360; }
+  return [h, Math.round(s * 100), Math.round(l * 100)];
+}
+export function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return `#${[f(0), f(8), f(4)].map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`;
 }
 export const hexToRgb = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)) : [201, 177, 138]; };

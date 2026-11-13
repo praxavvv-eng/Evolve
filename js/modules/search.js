@@ -12,7 +12,7 @@ const go = hash => { location.hash = hash; };
 function buildIndex() {
   const s = State.get(), out = [];
   const add = (group, ic, title, sub, hay, run) => out.push({ group, ic, title: String(title || ''), sub, hay: `${title} ${hay || ''}`.toLowerCase(), run });
-  s.tasks.forEach(t => add('Tasks', 'check-square', t.title, `${t.done ? 'Done' : 'Open'}${t.due ? ` · due ${fmtDate(t.due)}` : ''}`, `${t.notes} ${t.category}`, () => openForm('task', { id: t.id })));
+  s.tasks.forEach(t => add('Tasks', 'check-square', t.title, `${t.done ? 'Done' : 'Open'}${t.due ? ` · due ${fmtDate(t.due)}${t.dueTime ? ` ${t.dueTime}` : ''}` : ''}`, `${t.notes} ${t.category}`, () => openForm('task', { id: t.id })));
   s.habits.forEach(h => add('Habits', 'repeat', h.name, h.schedule, '', () => go(`#/habits/${h.id}`)));
   s.subjects.forEach(x => add('Academics', 'graduation', x.name, 'Subject', x.code, () => go(`#/academics/subject/${x.id}`)));
   s.academicItems.forEach(x => add('Academics', 'graduation', x.title, `${x.subject} · ${x.type}`, x.details, () => openForm('academic', { id: x.id })));

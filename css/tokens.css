@@ -119,3 +119,22 @@
 
 /* reduced motion: resolved by JS into data-motion="reduce" */
 [data-motion="reduce"] { --t-fast: 1ms; --t-med: 1ms; --t-slow: 1ms; }
+
+/* ---------- module identities: each screen tints its glow, bars and highlights ---------- */
+:root { --mod-rgb: var(--accent-rgb); }
+[data-module="habits"], [data-module="discipline"] { --mod-rgb: 147, 199, 164; }
+[data-module="academics"], [data-module="insights"] { --mod-rgb: 148, 184, 208; }
+[data-module="finance"] { --mod-rgb: 222, 190, 112; }
+[data-module="fitness"] { --mod-rgb: 224, 150, 100; }
+[data-module="gaming"] { --mod-rgb: 112, 192, 176; }
+[data-module="learning"] { --mod-rgb: 205, 163, 155; }
+[data-module="journal"] { --mod-rgb: 200, 196, 184; }
+[data-scheme="light"] [data-module="finance"] { --mod-rgb: 176, 134, 40; }
+[data-scheme="light"] [data-module="habits"], [data-scheme="light"] [data-module="discipline"] { --mod-rgb: 62, 140, 96; }
+[data-scheme="light"] [data-module="academics"], [data-scheme="light"] [data-module="insights"] { --mod-rgb: 56, 120, 164; }
+[data-scheme="light"] [data-module="fitness"] { --mod-rgb: 196, 104, 52; }
+[data-scheme="light"] [data-module="gaming"] { --mod-rgb: 36, 140, 124; }
+[data-scheme="light"] [data-module="learning"] { --mod-rgb: 176, 104, 92; }
+
+/* smooth theme switching: colours cross-fade for a moment */
+.theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after { transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, fill 0.4s ease, stroke 0.4s ease, box-shadow 0.4s ease !important; }

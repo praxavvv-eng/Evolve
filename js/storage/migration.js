@@ -58,7 +58,8 @@ function normGame(g) {
   return {
     ...g, status, title: String(g.title || 'Untitled game'), platform: String(g.platform || 'PC'),
     hours: n0(g.hours), rating: g.rating === '' || g.rating == null ? '' : Math.min(10, Math.max(1, Number(g.rating) || 0)) || '',
-    progress: status === 'Completed' ? 100 : progress, cover: typeof g.cover === 'string' ? g.cover : '',
+    estimatedHours: n0(g.estimatedHours) || '',
+    progress: status === 'Completed' ? 100 : n0(g.estimatedHours) > 0 ? Math.min(100, (n0(g.hours) / n0(g.estimatedHours)) * 100) : progress, cover: typeof g.cover === 'string' ? g.cover : '',
     history: Array.isArray(g.history) ? g.history.filter(h => h && h.status).slice(-50) : []
   };
 }
@@ -155,7 +156,8 @@ export function normalizeState(input) {
   out.notes = out.notes.map(x => ({ ...x, tags: (Array.isArray(x.tags) ? x.tags : String(x.tags || '').split(',')).map(t => String(t).trim()).filter(Boolean).slice(0, 12) }));
   out.games = out.games.map(normGame);
   out.savingsGoals = out.savingsGoals.map(x => ({ ...x, name: String(x.name || 'Savings goal'), targetAmount: n0(x.targetAmount), savedAmount: n0(x.savedAmount) }));
-  out.tasks.forEach(t => { if (!t.title) t.title = 'Untitled task'; });
+  out.tasks.forEach(t => { if (!t.title) t.title = 'Untitled task'; t.dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') && t.due ? t.dueTime : ''; });
+  out.academicItems.forEach(x => { x.dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(x.dueTime || '') && x.due ? x.dueTime : ''; });
   out.habits.forEach(h => { if (!h.name) h.name = 'Habit'; });
   return out;
 }

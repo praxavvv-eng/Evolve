@@ -8,6 +8,7 @@ import { icon } from '../core/icons.js';
 import { pageHead, emptyState, addBtn, badge } from '../components/ui.js';
 import { selectHTML } from '../components/dropdown.js';
 import { progressBar } from '../components/charts.js';
+import { gameProgress } from '../core/stats.js';
 import { OPTIONS } from '../core/schemas.js';
 import { toast } from '../components/toast.js';
 
@@ -27,7 +28,7 @@ const stars = r => (num(r) ? `<span class="rate">${icon('star', { size: 13 })}<b
 function card(g) {
   return `<a class="game-card" href="#/gaming/${esc(g.id)}" aria-label="${esc(g.title)}, ${esc(g.status)}">
     ${cover(g)}<div class="game-top">${badge(g.status, STATUS_KIND[g.status])}${stars(g.rating)}</div>
-    <div class="game-info"><h3 class="trunc">${esc(g.title)}</h3><p class="trunc">${esc(g.platform)}${num(g.hours) ? ` · ${fmtNum(g.hours, 1)} h` : ''}</p>${g.status !== 'Completed' && num(g.progress) > 0 ? progressBar(g.progress) : ''}</div></a>`;
+    <div class="game-info"><h3 class="trunc">${esc(g.title)}</h3><p class="trunc">${esc(g.platform)}${num(g.hours) ? ` · ${fmtNum(g.hours, 1)} h` : ''}</p>${(() => { const p = gameProgress(g); return p.value !== null && g.status !== 'Completed' ? progressBar(p.value) : ''; })()}</div></a>`;
 }
 
 function renderList() {
@@ -44,15 +45,23 @@ function renderList() {
     ${list.length ? `<div class="game-grid" style="--i:2">${list.map(card).join('')}</div>` : `<div class="card">${emptyState({ icon: 'gamepad', title: `Nothing in ${ui.status}`, text: 'Change a game’s status to move it here.' })}</div>`}</div>`;
 }
 
+function progressBlock(g) {
+  const p = gameProgress(g);
+  if (p.source === 'completed') return `<div><div class="between"><span class="field-label">Progress</span><b class="t-num pos">100%</b></div><div class="mt-2">${progressBar(100, 'is-pos')}</div><p class="field-hint mt-2">Marked completed.</p></div>`;
+  if (p.source === 'estimate') return `<div><div class="between"><span class="field-label">Playtime progress</span><b class="t-num">${Math.round(p.value)}%</b></div><div class="mt-2">${progressBar(p.value)}</div><p class="field-hint mt-2">${fmtNum(p.hours, 1)} h of an estimated ${fmtNum(p.est, 1)} h. This is playtime progress, not story completion.</p></div>`;
+  if (p.source === 'manual') return `<div><div class="between"><span class="field-label">Progress (manual)</span><b class="t-num">${Math.round(p.value)}%</b></div><div class="mt-2">${progressBar(p.value)}</div><p class="field-hint mt-2">Set by hand. ${addBtn('game', 'Add an estimated total', { cls: 'link-btn', id: g.id })} to calculate it from playtime.</p></div>`;
+  return `<div class="progress-unset"><div class="between"><span class="field-label">Progress</span><span class="t-small">Not set</span></div><p class="t-small mt-2">Add the estimated total hours to see progress from your playtime.</p><div class="mt-2">${addBtn('game', 'Add estimated hours', { cls: 'btn btn-sm btn-soft', id: g.id })}</div></div>`;
+}
+
 function renderDetail(id) {
   const g = find('game', id);
   if (!g) return `<div class="card">${emptyState({ icon: 'gamepad', title: 'Game not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/gaming">Back to library</a>' })}</div>`;
   const hist = (g.history || []).slice().reverse();
-  const facts = [['Platform', g.platform], ['Playtime', `${fmtNum(g.hours, 1)} h`], ['Rating', num(g.rating) ? `${num(g.rating)} / 10` : 'Not rated'], ['Started', g.startedAt ? fmtDate(g.startedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'], ['Finished', g.finishedAt ? fmtDate(g.finishedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—']];
+  const facts = [['Platform', g.platform], ['Playtime', `${fmtNum(g.hours, 1)} h`], ...(num(g.estimatedHours) > 0 ? [['Estimated total', `${fmtNum(g.estimatedHours, 1)} h`]] : []), ['Rating', num(g.rating) ? `${num(g.rating)} / 10` : 'Not rated'], ['Started', g.startedAt ? fmtDate(g.startedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'], ['Finished', g.finishedAt ? fmtDate(g.finishedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—']];
   return `<div class="game-detail"><div class="gd-cover" style="--i:0">${cover(g)}</div>
     <div class="gd-main stack-lg"><header style="--i:1"><div class="row-gap">${badge(g.status, STATUS_KIND[g.status])}${stars(g.rating)}</div><h1 class="t-title mt-2">${esc(g.title)}</h1><p class="t-body">${esc(g.platform)}</p></header>
       <section class="card card-pad stack" style="--i:2"><div class="between"><span class="field-label">Status</span>${selectHTML({ value: g.status, options: OPTIONS.gameStatus, label: 'Change status', compact: true, dataChange: 'game-status', extra: `data-id="${esc(g.id)}"` })}</div>
-        ${g.status === 'Completed' ? '<p class="t-small pos">Completed</p>' : `<div><div class="between"><span class="field-label">Progress</span><b class="t-num">${num(g.progress)}%</b></div><div class="mt-2">${progressBar(g.progress)}</div></div>`}
+        ${progressBlock(g)}
         <div class="between"><span class="field-label">Playtime</span><div class="row-gap"><b class="t-num">${fmtNum(g.hours, 1)} h</b><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="0.5">+30 min</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="1">+1 h</button></div></div></section>
       <section class="card card-pad" style="--i:3"><dl class="kv">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>
       ${g.notes ? `<section class="card card-pad" style="--i:4"><h2 class="t-h2">Notes</h2><p class="t-body mt-2" style="white-space:pre-wrap">${esc(g.notes)}</p></section>` : ''}
