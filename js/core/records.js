@@ -4,6 +4,7 @@ import * as State from './state.js';
 import { schemas } from './schemas.js';
 import { prepare } from './validation.js';
 import { award, checkProgress } from './xp.js';
+import { challengeStats } from './stats.js';
 import { uid, todayStr, clamp, num, isDateStr, dateStr } from './utils.js';
 
 export const find = (type, id) => State.get()[schemas[type].list].find(x => x.id === id);
@@ -208,3 +209,28 @@ export function updateBookPage(id, page) {
   checkProgress();
 }
 
+
+/* ---------------- books: add pages ---------------- */
+export function addBookPages(id, pages) {
+  const b = find('book', id), n = Math.round(num(pages));
+  if (!b || !(n > 0)) return false;
+  updateBookPage(id, num(b.currentPage) + n);      // updateBookPage clamps to totalPages and finishes the book at 100%
+  return true;
+}
+
+/* ---------------- challenges: independent day records ---------------- */
+/** status: 'done' | 'slip' | '' (remove the record). A day with no record is never counted as a miss. */
+export function setChallengeDay(id, date, status, note = '') {
+  let xp = 0;
+  State.update(s => {
+    const c = s.challenges.find(x => x.id === id); if (!c) return;
+    c.logs = c.logs || {};
+    if (status === 'done' || status === 'slip') c.logs[date] = { status, note: String(note || '').slice(0, 400), at: new Date().toISOString() }; else delete c.logs[date];
+    const st = challengeStats(c);
+    if (status === 'done' && date === todayStr()) xp = award(s, `challenge:${c.id}:${date}`, 5, 'personal', 'Challenge day recorded').points;
+    if (st.reached && c.status !== 'completed') { c.status = 'completed'; c.completedAt = date; award(s, `challenge:${c.id}:complete`, 100, 'personal', 'Challenge completed'); }
+    else if (!st.reached && c.status === 'completed') { c.status = 'active'; c.completedAt = ''; }
+  });
+  checkProgress();
+  return xp;
+}

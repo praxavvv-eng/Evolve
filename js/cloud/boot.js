@@ -1,21 +1,8 @@
 
 import { auth, db } from '../firebase.js';
-import {
-  signInAnonymously,
-  onAuthStateChanged
-} from 'firebase/auth';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
-import {
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-  writeBatch
-} from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, runTransaction, serverTimestamp, setDoc, Timestamp, writeBatch } from 'firebase/firestore';
 
 import * as State from '../core/state.js';
 import { registerActions, on, emit } from '../core/events.js';
@@ -23,6 +10,9 @@ import * as Router from '../router.js';
 import { esc } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { toast } from '../components/toast.js';
+import { setHealth, health } from '../core/syncstatus.js';
+import { mergeStates } from './merge.js';
+import { LISTS } from '../storage/migration.js';
 
 const WORKSPACE_KEY = 'evolve_cloud_workspace_v1';
 const DEVICE_KEY = 'evolve_cloud_device_v1';
@@ -39,6 +29,11 @@ let applyingRemote = false;
 let hasLoadedCloud = false;
 let pushTimer = null;
 let latestCode = '';
+let lastRaw = '';          // last workspace text this device uploaded (skips identical uploads)
+let lastChunks = [];       // last uploaded chunk payloads (only changed chunks are written)
+let lastSeenMs = 0;        // newest cloud update this device has already merged
+let retryDelay = 4000;
+const toMs = t => (t && typeof t.toMillis === 'function' ? t.toMillis() : Number(t) || 0);
 
 let status = {
   state: 'connecting',
@@ -47,7 +42,35 @@ let status = {
 
 function setStatus(state, message) {
   status = { state, message };
+  const map = { synced: 'idle', syncing: 'syncing', connecting: 'connecting', waiting: 'connecting', error: 'error' };
+  const patch = { status: state === 'error' && navigator.onLine === false ? 'offline' : (map[state] || state) };
+  if (state === 'synced') { patch.lastOk = Date.now(); patch.lastError = ''; }
+  if (state === 'error') { patch.lastError = message; patch.lastErrorAt = Date.now(); }
+  setHealth(patch);
   emit('view:refresh');
+}
+
+/** Join the chunk documents of one cloud snapshot into a workspace object (null while chunks are still arriving). */
+function assemble(docs, meta) {
+  const total = Number(meta.total);
+  if (!Number.isInteger(total) || total < 1 || total > MAX_CHUNKS) throw new Error('Invalid cloud workspace structure.');
+  const chunks = new Array(total);
+  docs.forEach(item => {
+    if (!item.id.startsWith('chunk_')) return;
+    const data = item.data();
+    if (Number.isInteger(data.index) && data.index >= 0 && data.index < total) chunks[data.index] = data.payload;
+  });
+  return chunks.some(part => typeof part !== 'string') ? null : JSON.parse(chunks.join(''));
+}
+
+/** Another device saved since we last looked: merge its changes into ours instead of overwriting them. */
+function mergeRemote(remoteState, remoteMs) {
+  const merged = mergeStates(State.get(), remoteState);
+  applyingRemote = true;
+  try { State.applyRemote(merged); } finally { applyingRemote = false; }
+  lastSeenMs = remoteMs; lastChunks = []; lastRaw = '';
+  setHealth({ conflicts: health.conflicts + 1 });
+  toast('Merged changes from another device');
 }
 
 function randomToken(bytes = 32) {
@@ -118,15 +141,16 @@ function splitData(raw) {
   return parts;
 }
 
-function schedulePush(delay = 900) {
+function schedulePush(delay = 1500) {
   if (!ready || applyingRemote) return;
 
   dirty = true;
   clearTimeout(pushTimer);
 
   pushTimer = setTimeout(() => {
-    pushWorkspace().catch(error => {
+    pushWorkspace().then(() => { retryDelay = 4000; }).catch(error => {
       setStatus('error', error.message || 'Cloud saving failed.');
+      if (dirty && navigator.onLine !== false) { setTimeout(() => schedulePush(0), retryDelay); retryDelay = Math.min(60000, retryDelay * 2); }   // retry with backoff; local data is untouched
     });
   }, delay);
 }
@@ -134,7 +158,27 @@ function schedulePush(delay = 900) {
 async function pushWorkspace() {
   if (!ready || !workspaceId || applyingRemote) return;
 
+  const chunkCollection = collection(db, 'workspaces', workspaceId, 'chunks');
+
+  /* Never overwrite newer cloud data: if another device saved since we last looked, merge it in first. */
+  const metaSnap = await getDoc(doc(chunkCollection, 'meta'));
+  if (metaSnap.exists()) {
+    const m = metaSnap.data();
+    if (m.deviceId !== deviceId && toMs(m.updatedAt) > lastSeenMs) {
+      try {
+        const all = await getDocs(chunkCollection);
+        const remoteState = assemble(all.docs, m);
+        if (!remoteState) throw new Error('Cloud data is still uploading. Will retry.');
+        mergeRemote(remoteState, toMs(m.updatedAt));
+      } catch (error) {
+        throw new Error(`Not uploaded, to protect newer cloud data. ${error.message}`);
+      }
+    }
+  }
+
   const raw = JSON.stringify(State.get());
+  if (raw === lastRaw) { dirty = false; setStatus('synced', 'Your data is saved and synced with Firebase.'); return; }   // nothing changed since the last upload
+
   const chunks = splitData(raw);
 
   if (chunks.length > MAX_CHUNKS) {
@@ -144,19 +188,10 @@ async function pushWorkspace() {
   setStatus('syncing', 'Saving your latest changes to Firebase...');
 
   const batch = writeBatch(db);
-  const chunkCollection = collection(
-    db,
-    'workspaces',
-    workspaceId,
-    'chunks'
-  );
 
   chunks.forEach((payload, index) => {
-    batch.set(doc(chunkCollection, `chunk_${index}`), {
-      index,
-      payload,
-      deviceId
-    });
+    if (lastChunks[index] === payload) return;           // unchanged chunk: no write
+    batch.set(doc(chunkCollection, `chunk_${index}`), { index, payload, deviceId });
   });
 
   batch.set(doc(chunkCollection, 'meta'), {
@@ -168,12 +203,15 @@ async function pushWorkspace() {
 
   await batch.commit();
 
+  lastRaw = raw;
+  lastChunks = chunks;
   dirty = false;
 
   setStatus('synced', 'Your data is saved and synced with Firebase.');
 }
 
 async function connectWorkspace() {
+  lastRaw = ''; lastChunks = []; lastSeenMs = 0;
   ready = false;
   hasLoadedCloud = false;
   dirty = false;
@@ -264,52 +302,37 @@ async function connectWorkspace() {
         ready = true;
 
         if (meta.deviceId === deviceId) {
+          lastSeenMs = Math.max(lastSeenMs, toMs(meta.updatedAt));
           setStatus('synced', 'Your data is saved and synced with Firebase.');
           return;
         }
 
-        const total = Number(meta.total);
+        const remoteState = assemble(snapshot.docs, meta);
+        if (!remoteState) return;
+        const remoteMs = toMs(meta.updatedAt);
 
-        if (!Number.isInteger(total) || total < 1 || total > MAX_CHUNKS) {
-          throw new Error('Invalid cloud workspace structure.');
-        }
-
-        const chunks = new Array(total);
-
-        snapshot.docs.forEach(item => {
-          if (!item.id.startsWith('chunk_')) return;
-
-          const data = item.data();
-
-          if (
-            Number.isInteger(data.index) &&
-            data.index >= 0 &&
-            data.index < total
-          ) {
-            chunks[data.index] = data.payload;
-          }
-        });
-
-        if (chunks.some(part => typeof part !== 'string')) {
-          return;
-        }
-
-        // Avoid replacing unsaved local edits with another device's update.
+        /* Unsynced local edits: merge both sides, then upload the merged result. */
         if (dirty) {
-          schedulePush(100);
+          mergeRemote(remoteState, remoteMs);
+          schedulePush(300);
           return;
         }
 
-        const remoteState = JSON.parse(chunks.join(''));
+        /* First load on a device that already holds its own records: merge, so neither side is lost. */
+        const local = State.get();
+        const hasLocalData = LISTS.some(k => Array.isArray(local[k]) && local[k].length && k !== 'trashBin' && k !== 'activityLog') || Number(local.xp) > 0;
+        if (!hasLoadedCloud && hasLocalData) {
+          mergeRemote(remoteState, remoteMs);
+          hasLoadedCloud = true;
+          schedulePush(300);
+          return;
+        }
 
         applyingRemote = true;
 
         try {
           if (!hasLoadedCloud) {
-            State.replaceAll(remoteState, {
-              keepSnapshot: true
-            });
-
+            State.replaceAll(remoteState, { keepSnapshot: true });
             hasLoadedCloud = true;
           } else {
             State.applyRemote(remoteState);
@@ -318,10 +341,8 @@ async function connectWorkspace() {
           applyingRemote = false;
         }
 
-        setStatus(
-          'synced',
-          'Latest workspace data received from Firebase.'
-        );
+        lastSeenMs = remoteMs; lastChunks = []; lastRaw = '';
+        setStatus('synced', 'Latest workspace data received from Firebase.');
 
       } catch (error) {
         setStatus('error', error.message || 'Could not read cloud data.');
@@ -618,3 +639,7 @@ connectWorkspace().catch(error => {
 
   setStatus('error', message);
 });
+
+/* Offline handling: keep working locally, resume automatically when the connection returns. */
+window.addEventListener('offline', () => setHealth({ status: 'offline' }));
+window.addEventListener('online', () => { if (dirty) schedulePush(400); else setHealth({ status: ready ? 'idle' : health.status }); });

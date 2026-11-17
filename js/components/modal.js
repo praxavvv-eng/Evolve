@@ -8,8 +8,9 @@ const stack = [];
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 function syncViewport() {
-  const vv = window.visualViewport;
-  document.documentElement.style.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`);
+  const vv = window.visualViewport, root = document.documentElement.style;
+  root.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`);
+  root.setProperty('--vvt', `${vv ? vv.offsetTop : 0}px`);        // overlays follow the visible area, so sheets sit above the keyboard
 }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', syncViewport); window.visualViewport.addEventListener('scroll', syncViewport); }
 syncViewport();
@@ -56,7 +57,11 @@ export function openSheet(o = {}) {
   };
   stack.push(api);
 
-  overlay.addEventListener('mousedown', e => { if (e.target === overlay && api.dismissable) api.close(); });
+  overlay.addEventListener('mousedown', e => {
+    if (e.target !== overlay || !api.dismissable) return;
+    if (api.guard && !api.guard()) { sheet.classList.remove('is-nudge'); void sheet.offsetWidth; sheet.classList.add('is-nudge'); return; }   // unsaved input: ignore the tap
+    api.close();
+  });
   overlay.addEventListener('click', e => { if (e.target.closest('[data-sheet-close]')) api.close(); });
 
   /* drag-to-dismiss (touch, phones only) */
@@ -67,7 +72,7 @@ export function openSheet(o = {}) {
     h.addEventListener('touchmove', e => { if (!dragging) return; dy = Math.max(0, e.touches[0].clientY - startY); sheet.style.transform = `translateY(${dy}px)`; }, { passive: true });
     h.addEventListener('touchend', () => {
       if (!dragging) return; dragging = false; sheet.classList.remove('is-dragging');
-      if (dy > 110) api.close(); else sheet.style.transform = '';
+      if (dy > 110 && !(api.guard && !api.guard())) api.close(); else sheet.style.transform = '';
     });
   });
 

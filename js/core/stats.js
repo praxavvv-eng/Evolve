@@ -105,11 +105,11 @@ export const sessionsByDate = state => groupBy(state.workoutLogs, x => x.date ||
 
 /* ---------------- discipline ---------------- */
 export const logsOf = nf => nf?.dailyLogs || nf?.logs || {};
-export function streakFrom(logs, endDate, startDate = '') {
+export function streakFrom(logs, endDate, startDate = '', ok = 'on-track') {
   let count = 0, cursor = endDate;
   while (count < 10000) {
     if (startDate && cursor < startDate) break;
-    if (logs?.[cursor]?.status !== 'on-track') break;
+    if (logs?.[cursor]?.status !== ok) break;
     count++; cursor = addDays(cursor, -1);
   }
   return count;
@@ -145,3 +145,39 @@ export function gameProgress(g) {
 }
 /** Timed entries sort by time; entries without a time come first (all-day). */
 export const byTime = (a, b) => String(a.dueTime || '').localeCompare(String(b.dueTime || ''));
+
+/* ---------------- habit statistics (all from recorded check-ins) ---------------- */
+export function habitStartDate(state, h) {
+  const first = Object.keys(state.habitLogs).filter(d => state.habitLogs[d]?.[h.id]).sort()[0];
+  const created = h.createdAt ? String(h.createdAt).slice(0, 10) : '';
+  const candidates = [first, created].filter(isDateStr).sort();
+  return candidates[0] || todayStr();
+}
+export function habitStats(state, h) {
+  const today = todayStr(), start = habitStartDate(state, h);
+  let longest = 0, run = 0, totalDone = 0, scheduled = 0;
+  for (let d = start, i = 0; d <= today && i < 4000; d = addDays(d, 1), i++) {
+    if (!isScheduled(h, d)) continue;
+    const done = habitDone(state, h.id, d);
+    scheduled++;
+    if (done) { totalDone++; run++; longest = Math.max(longest, run); } else if (d < today) run = 0;
+  }
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(today, -i)).filter(d => d >= start && isScheduled(h, d));
+  const weekDone = weekDays.filter(d => habitDone(state, h.id, d)).length;
+  const recent = Object.keys(state.habitLogs).filter(d => state.habitLogs[d]?.[h.id]).sort().reverse().slice(0, 5);
+  return { current: habitStreak(state, h), longest, totalDone, scheduled, pct: scheduled ? (totalDone / scheduled) * 100 : 0, weekDone, weekScheduled: weekDays.length, weekPct: weekDays.length ? (weekDone / weekDays.length) * 100 : 0, recent, start };
+}
+
+/* ---------------- challenges ---------------- */
+export function challengeStats(c) {
+  const today = todayStr(), logs = c.logs || {};
+  const days = Object.keys(logs).sort();
+  let longest = 0, run = 0, prev = '';
+  days.forEach(d => { if (logs[d].status !== 'done') { run = 0; prev = d; return; } run = prev && addDays(prev, 1) === d && run > 0 ? run + 1 : 1; longest = Math.max(longest, run); prev = d; });
+  let current = 0;
+  if (logs[today]?.status !== 'slip') current = streakFrom(logs, logs[today]?.status === 'done' ? today : addDays(today, -1), '', 'done');
+  const done = days.filter(d => logs[d].status === 'done').length, slips = days.filter(d => logs[d].status === 'slip').length;
+  const end = addDays(c.startDate, Math.max(1, c.targetDays) - 1);
+  return { done, slips, current, longest, end, progress: Math.min(100, (current / Math.max(1, c.targetDays)) * 100), reached: longest >= c.targetDays, notStarted: c.startDate > today, todayStatus: logs[today]?.status || '' };
+}
+export const maxChallengeStreak = state => Math.max(0, ...(state.challenges || []).map(c => challengeStats(c).longest));

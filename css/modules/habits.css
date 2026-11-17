@@ -1,24 +1,47 @@
-/* Habits: calm and minimal */
-.habit-summary { display: flex; align-items: center; gap: 20px; }
-.habit-card { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
-.habit-top { display: flex; align-items: center; gap: 12px; }
-.habit-glyph { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; flex: none; font-size: 1.35rem; background: var(--accent-soft); border: 1px solid var(--accent-line); }
-.habit-top .row-main { color: inherit; }
-.habit-top .row-sub { display: flex; align-items: center; gap: 4px; }
-.habit-top .row-sub .i { color: var(--warn); }
-.habit-card.is-done { border-color: var(--accent-line); }
-.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.wd { display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 44px; padding: 4px 0; border-radius: 12px; color: var(--text-3); }
-.wd small { font-size: 0.68rem; font-weight: 650; }
-.wd i { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; color: transparent; transition: all var(--t-med) var(--spring); }
-.wd.is-on i { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.wd.is-today small { color: var(--accent-text); }
-.wd.is-off { opacity: 0.4; }
-.heat { display: flex; flex-direction: column; gap: 6px; }
-.heat-head, .heat-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.heat-head span { text-align: center; font-size: 0.7rem; font-weight: 650; color: var(--text-3); }
-.heat-cell { aspect-ratio: 1; max-height: 44px; border-radius: 10px; background: var(--surface-3); transition: transform var(--t-fast) var(--ease), background var(--t-fast); }
-.heat-cell:active { transform: scale(0.9); }
-.heat-cell.is-on { background: var(--accent); }
-.heat-cell.is-off:not(.is-on) { opacity: 0.35; }
-.heat-cell.is-today { box-shadow: 0 0 0 2px var(--accent-line); }
+/* Habits: a calm list, and a detail screen with the habit's own colour (--hc) */
+.day-progress { padding: 0 2px; }
+.habit-row { gap: 12px; }
+.habit-glyph { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; flex: none; font-size: 1.25rem; background: color-mix(in srgb, var(--hc, var(--accent)) 18%, transparent); color: var(--hc, var(--accent-text)); }
+.habit-glyph.is-lg { width: 52px; height: 52px; border-radius: 17px; font-size: 1.5rem; }
+.habit-row .row-sub { display: flex; align-items: center; gap: 8px; }
+.dots7 { display: inline-flex; gap: 3px; }
+.dots7 i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); }
+.dots7 i.on { background: var(--hc); } .dots7 i.off { opacity: 0.4; }
+.habit-row .check.is-on { background: var(--hc); border-color: var(--hc); color: var(--hc-on); }
+.habit-row .check { border-color: color-mix(in srgb, var(--hc) 55%, var(--line-strong)); }
+
+/* heatmap */
+.hm-scroll { overflow-x: auto; padding-bottom: 6px; margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); scrollbar-width: none; }
+.hm-scroll::-webkit-scrollbar { display: none; }
+.hm { display: inline-flex; flex-direction: column; gap: 8px; min-width: min-content; }
+.hm-months { display: grid; grid-template-columns: repeat(53, 15px); gap: 4px; font-size: 0.66rem; font-weight: 600; color: var(--text-3); height: 12px; }
+.hm-months span { white-space: nowrap; overflow: visible; }
+.hm-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(53, 15px); gap: 4px; }
+.hm-col { display: grid; grid-template-rows: repeat(7, 15px); gap: 4px; }
+.hm-cell { width: 15px; height: 15px; border-radius: 4px; background: var(--surface-3); padding: 0; transition: transform var(--t-fast) var(--ease); }
+.hm-cell:hover { transform: scale(1.25); }
+.hm-cell.is-done { background: var(--hc); }
+.hm-cell.is-missed { background: color-mix(in srgb, var(--text) 10%, transparent); }
+.hm-cell.is-off, .hm-cell.is-pre { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.hm-cell.is-open { background: color-mix(in srgb, var(--hc) 22%, transparent); }
+.hm-cell.is-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent); }
+.hm-cell.is-today, .hw-day.is-today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
+.hm-cell.is-sel, .hw-day.is-sel { outline: 2px solid var(--hc); outline-offset: 2px; }
+.hw { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.hw-day { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 10px; border-radius: 16px; background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text-3); transition: transform var(--t-fast) var(--ease); }
+.hw-day:active { transform: scale(0.94); }
+.hw-day small { font-size: 0.68rem; font-weight: 650; }
+.hw-day span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.95rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.hw-day.is-done { background: var(--hc); color: var(--hc-on); }
+.hw-day.is-future { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.hw-day.is-off, .hw-day.is-pre { opacity: 0.5; }
+.hw-day.is-today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
+.hm-legend { display: flex; gap: 16px; font-size: 0.74rem; color: var(--text-3); }
+.hm-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.hm-legend .lg-done { background: var(--hc, var(--accent)); } .hm-legend .lg-missed { background: color-mix(in srgb, var(--text) 14%, transparent); }
+.hm-legend .lg-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 25%, transparent); } .hm-legend .lg-slip { background: var(--warn); }
+.hm-sel { display: flex; flex-direction: column; gap: 1px; font-size: 0.82rem; color: var(--text-3); } .hm-sel b { color: var(--text); font-size: 0.95rem; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 16px; padding: 4px 2px; }
+.stat-grid .stat b { font-size: 1.9rem; letter-spacing: -0.04em; color: var(--hc, var(--text)); }
+.stat-grid.is-3 { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 720px) { .stat-grid:not(.is-3) { grid-template-columns: repeat(5, 1fr); } }

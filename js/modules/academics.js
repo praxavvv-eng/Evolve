@@ -31,7 +31,7 @@ function renderOverview() {
   const dueSoon = ov.upcoming.filter(x => x.due <= `${new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10)}`).length;
   const overdue = ov.pending.filter(x => isDateStr(x.due) && x.due < today).length;
   const card = ({ subject: sub, ...st }) => `<a class="card sub-card lift" href="#/academics/subject/${esc(sub.id)}">
-    <div class="between"><div style="min-width:0"><p class="t-micro">${esc(sub.code || 'Subject')}</p><h3 class="t-h2 trunc">${esc(sub.name)}</h3></div>${ring({ value: st.progress, size: 56, stroke: 6, label: pctText(st.progress), title: `${sub.name} progress ${pctText(st.progress)}` })}</div>
+    <div class="between"><div style="min-width:0"><p class="t-micro">${esc(sub.code || 'Subject')}</p><h3 class="t-h2 trunc">${esc(sub.name)}</h3></div></div>
     ${progressBar(st.progress, '', { pct: true })}
     <div class="sub-meta"><span><b>${st.assignments.done}/${st.assignments.total}</b> assignments</span>${st.practicals.total ? `<span><b>${st.practicals.done}/${st.practicals.total}</b> practicals</span>` : ''}<span><b>${st.attendance.rate === null ? '–' : pctText(st.attendance.rate)}</b> attendance</span></div>
     ${st.pending.length ? `<p class="t-small">${plural(st.pending.length, 'item')} pending</p>` : `<p class="t-small pos">${st.items.length ? 'All caught up' : 'No work added yet'}</p>`}</a>`;

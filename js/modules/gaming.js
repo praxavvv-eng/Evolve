@@ -19,7 +19,7 @@ const SORTS = [{ value: 'recent', label: 'Recently updated' }, { value: 'title',
 
 export function cover(g, cls = '') {
   const [a, b] = PALETTES[hashStr(g.title) % PALETTES.length];
-  const art = g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+  const art = g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : '';
   return `<div class="cover ${cls}" style="--c1:${a};--c2:${b}"><span class="cover-initials" aria-hidden="true">${esc(initials(g.title))}</span>${art}</div>`;
 }
 
@@ -48,6 +48,7 @@ function renderList() {
 function progressBlock(g) {
   const p = gameProgress(g);
   if (p.source === 'completed') return `<div><div class="between"><span class="field-label">Progress</span><b class="t-num pos">100%</b></div><div class="mt-2">${progressBar(100, 'is-pos')}</div><p class="field-hint mt-2">Marked completed.</p></div>`;
+  if (p.source === 'estimate' && p.value >= 100) return `<div><div class="between"><span class="field-label">Playtime progress</span><b class="t-num">100%</b></div><div class="mt-2">${progressBar(100)}</div><p class="field-hint mt-2">${fmtNum(p.hours, 1)} h reached the estimated ${fmtNum(p.est, 1)} h. This is playtime progress, not story completion.</p><div class="mt-2"><button class="btn btn-sm btn-soft" type="button" data-action="game-complete" data-id="${esc(g.id)}">Mark as completed</button></div></div>`;
   if (p.source === 'estimate') return `<div><div class="between"><span class="field-label">Playtime progress</span><b class="t-num">${Math.round(p.value)}%</b></div><div class="mt-2">${progressBar(p.value)}</div><p class="field-hint mt-2">${fmtNum(p.hours, 1)} h of an estimated ${fmtNum(p.est, 1)} h. This is playtime progress, not story completion.</p></div>`;
   if (p.source === 'manual') return `<div><div class="between"><span class="field-label">Progress (manual)</span><b class="t-num">${Math.round(p.value)}%</b></div><div class="mt-2">${progressBar(p.value)}</div><p class="field-hint mt-2">Set by hand. ${addBtn('game', 'Add an estimated total', { cls: 'link-btn', id: g.id })} to calculate it from playtime.</p></div>`;
   return `<div class="progress-unset"><div class="between"><span class="field-label">Progress</span><span class="t-small">Not set</span></div><p class="t-small mt-2">Add the estimated total hours to see progress from your playtime.</p><div class="mt-2">${addBtn('game', 'Add estimated hours', { cls: 'btn btn-sm btn-soft', id: g.id })}</div></div>`;
@@ -62,7 +63,7 @@ function renderDetail(id) {
     <div class="gd-main stack-lg"><header style="--i:1"><div class="row-gap">${badge(g.status, STATUS_KIND[g.status])}${stars(g.rating)}</div><h1 class="t-title mt-2">${esc(g.title)}</h1><p class="t-body">${esc(g.platform)}</p></header>
       <section class="card card-pad stack" style="--i:2"><div class="between"><span class="field-label">Status</span>${selectHTML({ value: g.status, options: OPTIONS.gameStatus, label: 'Change status', compact: true, dataChange: 'game-status', extra: `data-id="${esc(g.id)}"` })}</div>
         ${progressBlock(g)}
-        <div class="between"><span class="field-label">Playtime</span><div class="row-gap"><b class="t-num">${fmtNum(g.hours, 1)} h</b><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="0.5">+30 min</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="1">+1 h</button></div></div></section>
+        <div class="between"><span class="field-label">Playtime</span><div class="row-gap"><b class="t-num">${fmtNum(g.hours, 1)} h</b><button class="btn btn-sm btn-ghost" type="button" data-action="form" data-type="game" data-id="${esc(g.id)}" aria-label="Edit logged hours">${icon('edit', { size: 14 })}</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="0.5">+30 min</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="1">+1 h</button></div></div></section>
       <section class="card card-pad" style="--i:3"><dl class="kv">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>
       ${g.notes ? `<section class="card card-pad" style="--i:4"><h2 class="t-h2">Notes</h2><p class="t-body mt-2" style="white-space:pre-wrap">${esc(g.notes)}</p></section>` : ''}
       ${hist.length ? `<section class="card card-flush" style="--i:5"><div class="panel-head"><div><h2>History</h2><p>Status changes recorded by the app</p></div></div><div class="list">${hist.map(h => `<div class="row"><span class="row-main"><span class="row-title">${esc(h.status)}</span></span><span class="row-end t-small">${esc(fmtDate(h.date, { day: 'numeric', month: 'short', year: 'numeric' }))}</span></div>`).join('')}</div></section>` : ''}
@@ -70,6 +71,7 @@ function renderDetail(id) {
 }
 
 registerActions({
+  'game-complete'(el) { const g = find('game', el.dataset.id); if (g && saveRecord('game', { ...g, status: 'Completed' }, g.id).ok) toast('Marked as completed'); },
   'game-filter'(el) { ui.status = el.dataset.status; emit('view:refresh'); },
   'game-hours'(el) {
     const g = find('game', el.dataset.id); if (!g) return;

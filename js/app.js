@@ -6,10 +6,11 @@ import { initAppearance } from './core/appearance.js';
 import { checkProgress } from './core/xp.js';
 import { icon } from './core/icons.js';
 import { esc, $, downloadFile, todayStr } from './core/utils.js';
-import { NAV, GROUPS, navById } from './nav.js';
+import { HUBS, MORE, navById, hubOf } from './nav.js';
 import * as Router from './router.js';
 import { toast } from './components/toast.js';
 import { confirmDialog } from './components/modal.js';
+import { openMenu } from './components/dropdown.js';
 import './components/celebrate.js';
 import './components/dropdown.js';
 import './components/ui.js';
@@ -31,27 +32,26 @@ import { route as discipline } from './modules/discipline.js';
 import { route as levels } from './modules/levels.js';
 import { route as insights } from './modules/insights.js';
 import { route as settings } from './modules/settings.js';
+import { route as library } from './modules/library.js';
 
 /* ---------------- chrome: sidebar, tab bar, top bar ---------------- */
-const TABS = ['home', 'plan', '__add', 'insights', 'library'];
+const lastIn = JSON.parse(sessionStorage.getItem('evolve_last_in_hub') || '{}');   // remembers the last screen used inside each destination
 
 function buildSidebar() {
   const sb = $('#sidebar');
-  const item = n => `<a class="sb-item" href="#/${n.id}" data-nav="${n.id}" title="${esc(n.label)}"><span class="i-wrap">${icon(n.icon, { size: 20 })}</span><span>${esc(n.label)}</span></a>`;
+  const link = (n, cls = 'sb-item') => `<a class="${cls}" href="#/${n.id}" data-nav="${n.id}" title="${esc(n.label)}"><span class="i-wrap">${icon(n.icon, { size: 20 })}</span><span>${esc(n.label)}</span></a>`;
+  const hub = h => `<div class="sb-hub" data-hub="${h.id}"><a class="sb-item" href="#/${h.route}" data-hubnav="${h.id}" title="${esc(h.label)}"><span class="i-wrap">${icon(h.icon, { size: 20 })}</span><span>${esc(h.label)}</span></a>
+    ${h.items.filter(x => x !== 'library').length > 1 ? `<div class="sb-children">${h.items.filter(x => x !== 'library').map(x => navById(x)).map(n => link(n, 'sb-sub')).join('')}</div>` : ''}</div>`;
   sb.innerHTML = `
     <div class="sb-brand"><img src="assets/logo/mark.svg" alt="" width="34" height="34"><span class="spacer"></span>
       <button class="icon-btn" type="button" data-action="sidebar-toggle" aria-label="Collapse sidebar" id="sbToggle">${icon('chevron-left', { size: 18 })}</button></div>
-    <div class="sb-scroll">${GROUPS.filter(g => g !== 'System').map(g => `<div class="sb-group"><div class="sb-label">${g}</div>${NAV.filter(n => n.group === g).map(item).join('')}</div>`).join('')}</div>
-    <div class="sb-foot">${NAV.filter(n => n.group === 'System').map(item).join('')}</div>`;
+    <div class="sb-scroll">${HUBS.map(hub).join('')}</div>
+    <div class="sb-foot">${MORE.map(id => link(navById(id))).join('')}</div>`;
 }
 
 function buildTabbar() {
-  const tab = id => {
-    if (id === '__add') return `<button class="tab-add" type="button" data-action="quick-add" aria-label="Quick add"><span class="fab">${icon('plus', { size: 26 })}</span></button>`;
-    const n = id === 'library' ? { id: 'library', label: 'Library', icon: 'grid' } : navById(id);
-    return `<a class="tab" href="#/${n.id}" data-tab="${n.id}"><span>${icon(n.icon, { size: 22 })}</span><span>${esc(n.label)}</span></a>`;
-  };
-  $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd"></span>${TABS.map(tab).join('')}`;
+  const tab = h => `<a class="tab" href="#/${h.route}" data-tab="${h.id}"><span>${icon(h.icon, { size: 22 })}</span><span>${esc(h.label)}</span></a>`;
+  $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd"></span>${HUBS.map(tab).join('')}`;
 }
 
 function moveIndicator() {
@@ -64,21 +64,32 @@ function moveIndicator() {
 }
 
 function updateChrome({ id, parts, route }) {
-  const tabId = TABS.includes(id) ? id : 'library';
-  document.querySelectorAll('.tab').forEach(t => { if (t.dataset.tab === tabId) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
-  document.querySelectorAll('.sb-item').forEach(t => { if (t.dataset.nav === id) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
+  const hub = hubOf(id), hubId = hub?.id || '';
+  if (hub && !parts.length) { lastIn[hub.id] = id; sessionStorage.setItem('evolve_last_in_hub', JSON.stringify(lastIn)); }
+  document.querySelectorAll('.tab').forEach(t => {
+    const h = HUBS.find(x => x.id === t.dataset.tab);
+    t.setAttribute('href', `#/${h.id === 'library' ? 'library' : lastIn[h.id] || h.route}`);
+    if (t.dataset.tab === hubId) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('.sb-hub').forEach(h => h.classList.toggle('is-open', h.dataset.hub === hubId));
+  document.querySelectorAll('[data-hubnav]').forEach(t => { if (t.dataset.hubnav === hubId) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
+  document.querySelectorAll('.sb-sub, .sb-foot .sb-item').forEach(t => { if (t.dataset.nav === id) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   moveIndicator();
   const label = id === 'library' ? 'Library' : navById(id)?.label || '';
   const title = route.title?.(parts) || label;
   $('#topbarTitle').textContent = title;
-  document.title = title && title !== 'Home' ? `${title} · Evolve` : 'Evolve';
+  document.title = title && id !== 'home' ? `${title} · Evolve` : 'Evolve';
   const detail = parts.length > 0;
   const back = $('#backBtn'); back.hidden = !detail; $('#topMark').hidden = detail;
   back.dataset.to = `#/${id}`;
   onScroll();
 }
 
-function onScroll() { $('#topbar').classList.toggle('is-scrolled', window.scrollY > 24); }
+function onScroll() {
+  const y = window.scrollY;
+  $('#topbar').classList.toggle('is-scrolled', y > 24);
+}
+
 
 /* ---------------- banners ---------------- */
 function banner(html, { kind = '', dismiss = '' } = {}) {
@@ -118,20 +129,11 @@ function renderRecovery() {
   });
 }
 
-/* ---------------- library page (phones) ---------------- */
-const library = {
-  id: 'library',
-  render() {
-    const tile = n => `<a class="lib-tile" href="#/${n.id}"><span class="lib-icon">${icon(n.icon, { size: 22 })}</span><span><b>${esc(n.label)}</b><small>${esc(n.blurb)}</small></span></a>`;
-    return `<header class="page-head"><div><h1 class="t-title">Library</h1><p class="t-body">Everything in one place.</p></div></header>
-      ${GROUPS.map(g => `<section class="lib-group"><h2 class="t-micro" style="margin:0 4px 10px">${g}</h2><div class="lib-grid">${NAV.filter(n => n.group === g).map(tile).join('')}</div></section>`).join('')}`;
-  }
-};
-
 /* ---------------- actions ---------------- */
 registerActions({
   back(el) { location.hash = el.dataset.to || '#/home'; },
   search() { openSearch(); },
+  more(el) { openMenu(el, [...MORE.map(id => ({ label: navById(id).label, icon: navById(id).icon, onClick: () => { location.hash = `#/${id}`; } })), 'sep', { label: 'Cloud sync', icon: 'cloud', onClick: () => { location.hash = '#/cloud'; } }]); },
   'quick-add'() { openQuickAdd(); },
   'sidebar-toggle'() {
     const app = $('#app'), collapsed = app.dataset.sidebar !== 'collapsed';
@@ -155,6 +157,8 @@ function boot() {
   $('#searchPillIcon').innerHTML = icon('search', { size: 18 });
   $('#backBtn').innerHTML = icon('chevron-left', { size: 22 });
   $('#addPill').innerHTML = `${icon('plus', { size: 16 })} Add`;
+  $('#moreBtn').innerHTML = icon('more', { size: 20 });
+  $('#addIcon').innerHTML = icon('plus', { size: 22 });
   if (State.get().ui.sidebarCollapsed) { $('#app').dataset.sidebar = 'collapsed'; $('#sbToggle').innerHTML = icon('chevron-right', { size: 18 }); }
 
   [home, plan, habits, academics, finance, fitness, gaming, learning, journal, goals, calendar, discipline, levels, insights, settings, library].forEach(Router.register);

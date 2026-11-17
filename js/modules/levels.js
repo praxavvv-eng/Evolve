@@ -9,6 +9,9 @@ import { pageHead } from '../components/ui.js';
 import { ring, progressBar } from '../components/charts.js';
 import { toast } from '../components/toast.js';
 
+const ui = { xpOpen: false };
+document.addEventListener('toggle', e => { if (e.target.matches?.('details[data-disc="xp"]')) ui.xpOpen = e.target.open; }, true);
+
 function render() {
   const s = State.get(), li = levelInfo(s.xp), unlocked = unlockedMap(s), usedToday = Number(s.dailyXP[todayStr()]) || 0;
   const cats = Object.entries(s.categoryXP), maxCat = Math.max(1, ...cats.map(([, v]) => v));
@@ -33,8 +36,8 @@ function render() {
       <section class="card card-flush" style="--i:5"><div class="panel-head"><div><h2>Recent activity</h2><p>Today: ${usedToday} / ${s.settings.dailyXpCap} XP</p></div></div>
         ${s.activityLog.length ? `<div class="list">${s.activityLog.slice(0, 15).map(a => `<div class="row"><span class="row-main"><span class="row-title">${esc(a.label)}</span><span class="row-sub">${esc(CATEGORY_NAMES[a.category] || a.category)} · ${esc(fmtDate(String(a.date).slice(0, 10)))}</span></span><span class="row-end"><span class="badge badge-accent no-dot">+${a.points} XP</span></span></div>`).join('')}</div>` : '<p class="t-body" style="padding:0 var(--card-p) var(--card-p)">No XP yet. Finish a task, check in a habit or log a workout to get started.</p>'}</section>
 
-      <section class="card card-pad" style="--i:6"><h2 class="t-h2">How XP works</h2><ul class="xp-rules mt-3">${XP_RULES.map(([p, t]) => `<li><b>${p}</b><span>${esc(t)}</span></li>`).join('')}</ul>
-        <p class="t-small mt-3">Each event pays once, ever. Editing, un-checking and re-checking do not pay again. A daily cap of ${s.settings.dailyXpCap} XP keeps levels meaningful. You can change it in Settings.</p></section>
+      <details class="card card-pad disclose" style="--i:6" data-disc="xp" ${ui.xpOpen ? 'open' : ''}><summary class="t-h2">How XP works</summary><ul class="xp-rules mt-3">${XP_RULES.map(([p, t]) => `<li><b>${p}</b><span>${esc(t)}</span></li>`).join('')}</ul>
+        <p class="t-small mt-3">Each event pays once, ever. Editing, un-checking and re-checking do not pay again. A daily cap of ${s.settings.dailyXpCap} XP keeps levels meaningful. You can change it in Settings.</p></details>
     </div>`;
 }
 

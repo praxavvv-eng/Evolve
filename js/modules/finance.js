@@ -13,7 +13,7 @@ import { openSheet } from '../components/modal.js';
 import { OPTIONS } from '../core/schemas.js';
 import { toast } from '../components/toast.js';
 
-const ui = { month: monthKey(todayStr()), type: 'all', category: 'All', q: '', all: false };
+const ui = { tab: 'overview', month: monthKey(todayStr()), type: 'all', category: 'All', q: '', all: false };
 
 function txRow(t) {
   const inc = t.type === 'income';
@@ -59,16 +59,21 @@ function renderOverview() {
   const cat = (id, v) => selectHTML({ value: v, options: id, label: 'Category', compact: true, dataChange: 'fin-cat' });
 
   return `${head}<div class="stack-lg">
+    <div class="seg seg-fit" role="tablist" aria-label="Finance sections" style="--i:1">${[['overview', 'Overview'], ['transactions', 'Transactions'], ['plans', 'Budgets']].map(([id, l]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'is-on' : ''}" data-action="fin-tab" data-tab="${id}">${l}</button>`).join('')}</div>
+    ${ui.tab === 'overview' ? `
     <section class="wallet" style="--i:1" aria-label="Wallet balance">
       <div class="wallet-top"><span class="wallet-label">Recorded balance</span>${icon('wallet', { size: 22 })}</div>
       <div class="wallet-amount t-num">${esc(money(balance))}</div>
-      <div class="wallet-foot"><div><small>Income this month</small><b class="t-num">${esc(money(nowT.income))}</b></div><div><small>Spent this month</small><b class="t-num">${esc(money(nowT.expense))}</b></div></div>
+      <p class="wallet-note">Income minus expenses you have recorded</p>
     </section>
 
+` : ''}
     <div class="month-nav" style="--i:2"><button class="icon-btn is-solid" type="button" data-action="fin-month" data-dir="-1" aria-label="Previous month">${icon('chevron-left', { size: 20 })}</button>
       <button class="month-label" type="button" data-action="fin-month-now" ${ui.month === nowKey ? 'aria-current="date"' : ''} title="Jump to this month">${esc(fmtMonth(ui.month))}</button>
       <button class="icon-btn is-solid" type="button" data-action="fin-month" data-dir="1" aria-label="Next month">${icon('chevron-right', { size: 20 })}</button></div>
 
+
+    ${ui.tab === 'overview' ? `
     <div class="trio" style="--i:3"><div class="card card-pad stat"><span>Income</span><b class="pos t-num">${esc(money(cur.income, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Spent</span><b class="t-num">${esc(money(cur.expense, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Net</span><b class="t-num ${cur.net < 0 ? 'neg' : ''}">${esc(money(cur.net, { compactMode: true }))}</b></div></div>
 
     <div class="grid cols-2" style="--i:4">
@@ -81,6 +86,8 @@ function renderOverview() {
     <section class="card card-pad" style="--i:5"><div class="between"><div><h2 class="t-h2">Monthly spending</h2><p class="t-small">Last six months</p></div></div>
       ${monthsWithData >= 2 ? `<div class="mt-4">${bars({ items: monthData.map(d => ({ label: fmtMonthShort(d.m), value: d.expense, today: d.m === nowKey, title: `${fmtMonth(d.m)}: ${money(d.expense)} spent` })), height: 130, showValues: true, fmt: v => money(v, { compactMode: true }), ariaLabel: 'Spending by month' })}</div>` : '<p class="t-body mt-3">Comparisons appear once at least two months have transactions.</p>'}</section>
 
+` : ''}
+    ${ui.tab === 'plans' ? `
     <section style="--i:6">${sectionHead('Budgets', fmtMonth(ui.month), addBtn('budget', 'Budget', { cls: 'btn btn-sm', prefill: { month: ui.month } }))}
       ${budgets.length ? `<div class="card card-flush"><div class="list">${budgets.map(b => { const spent = budgetSpent(s, b), p = pct(spent, b.monthlyLimit), over = spent > b.monthlyLimit, warn = p >= num(b.alertAt, 80);
         return `<div class="row budget-row"><div class="row-main"><div class="between"><span class="row-title">${esc(b.category)}</span><span class="t-small t-num">${esc(money(spent))} / ${esc(money(b.monthlyLimit))}</span></div>${progressBar(p, over ? 'is-over' : warn ? 'is-warn' : '')}<span class="row-sub ${over ? 'neg' : warn ? 'warn' : ''}">${over ? `${esc(money(spent - b.monthlyLimit))} over budget` : `${esc(money(b.monthlyLimit - spent))} left${warn ? ' · nearing limit' : ''}`}</span></div>${kebab('budget', b.id)}</div>`; }).join('')}</div></div>`
@@ -92,6 +99,8 @@ function renderOverview() {
           <div class="between mt-3"><span class="t-small">${p >= 100 ? 'Goal reached' : `${Math.round(p)}%${g.targetDate ? ` · by ${esc(fmtDate(g.targetDate, { day: 'numeric', month: 'short', year: 'numeric' }))}` : ''}`}</span>${p < 100 ? `<button class="btn btn-soft btn-sm" type="button" data-action="save-add" data-id="${esc(g.id)}">${icon('plus', { size: 14 })} Add money</button>` : ''}</div></article>`; }).join('')}</div>`
         : `<div class="card card-pad"><p class="t-body">Saving for something? Add a goal and add money as you set it aside. Savings goals track separately from your transactions.</p></div>`}</section>
 
+` : ''}
+    ${ui.tab === 'transactions' ? `
     <section style="--i:8">${sectionHead('Transactions', ui.all ? 'All time' : fmtMonth(ui.month))}
       <div class="filters"><div class="seg" role="group" aria-label="Type">${['all', 'income', 'expense'].map(t => `<button type="button" aria-pressed="${ui.type === t}" class="${ui.type === t ? 'is-on' : ''}" data-action="fin-type" data-type="${t}">${t === 'all' ? 'All' : t === 'income' ? 'Income' : 'Expenses'}</button>`).join('')}</div>
         <div class="filters-row">${cat(['All', ...OPTIONS.txCategory], ui.category)}<button type="button" class="chip ${ui.all ? 'is-on' : ''}" data-action="fin-all" aria-pressed="${ui.all}">All time</button></div>
@@ -99,6 +108,7 @@ function renderOverview() {
       ${list.length ? `<div class="stack mt-3">${dates.map(d => { const day = grouped[d]; const net = day.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0);
         return `<section class="card card-flush"><div class="day-head"><span>${esc(relDay(d, { done: true }))}${d === today ? '' : ''}</span><span class="t-num t-small ${net > 0 ? 'pos' : ''}">${esc(money(net, { sign: true }))}</span></div><div class="list">${day.map(txRow).join('')}</div></section>`; }).join('')}</div>`
         : `<div class="card mt-3">${emptyState({ icon: 'receipt', title: 'No transactions match', text: ui.type !== 'all' || ui.category !== 'All' || ui.q ? 'Try clearing the filters.' : `Nothing recorded for ${fmtMonth(ui.month)}.`, action: addBtn('transaction', 'Add transaction') })}</div>`}</section>
+` : ''}
   </div>`;
 }
 
@@ -121,6 +131,7 @@ function openAddMoney(id) {
 }
 
 registerActions({
+  'fin-tab'(el) { ui.tab = el.dataset.tab; emit('view:refresh'); },
   'fin-month'(el) { ui.month = addMonths(ui.month, Number(el.dataset.dir)); ui.all = false; emit('view:refresh'); },
   'fin-month-now'() { ui.month = monthKey(todayStr()); ui.all = false; emit('view:refresh'); },
   'fin-type'(el) { ui.type = el.dataset.type; emit('view:refresh'); },

@@ -1,9 +1,15 @@
-/* Discipline: quiet, supportive, no alarm colours for setbacks */
-.disc-hero { display: flex; align-items: center; gap: 24px; padding: 22px; background: radial-gradient(100% 120% at 0% 0%, rgba(165, 189, 163, 0.12), transparent 60%), var(--surface); }
-.disc-stats { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.ms-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.ms-pill { display: inline-flex; align-items: center; gap: 4px; min-width: 34px; height: 30px; padding: 0 10px; justify-content: center; border-radius: 99px; font-size: 0.78rem; font-weight: 650; background: var(--surface-3); color: var(--text-3); font-variant-numeric: tabular-nums; }
-.ms-pill.is-on { background: var(--accent-soft); color: var(--accent-text); }
-.cal-day.mark-on { background: rgba(var(--accent-rgb), 0.2); color: var(--accent-text); font-weight: 700; }
-.cal-day.mark-slip { background: var(--warn-soft); color: var(--warn); }
-.cal-day.mark-on.is-sel, .cal-day.mark-slip.is-sel { background: var(--accent); color: var(--on-accent); }
+/* Discipline: quiet, supportive. Setbacks use a soft amber, never alarm red. */
+.ch-ring { flex: none; display: block; }
+.ch-row .row-main { min-width: 0; }
+.ch-hero { display: flex; align-items: center; gap: 24px; padding: 4px 2px; }
+.ch-hero .stat-grid { flex: 1; min-width: 0; gap: 12px; }
+.ch-hero .stat b { font-size: 1.5rem; }
+.cd { display: flex; flex-wrap: wrap; gap: 7px; }
+.cd-dot { width: 18px; height: 18px; border-radius: 50%; padding: 0; background: color-mix(in srgb, var(--text) 8%, transparent); transition: transform var(--t-fast) var(--ease); }
+.cd-dot:hover { transform: scale(1.2); }
+.cd-dot.is-done { background: var(--accent); } .cd-dot.is-slip { background: var(--warn); }
+.cd-dot.is-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 18%, transparent); }
+.cd-dot.is-open { background: transparent; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cd-dot.is-today { outline: 2px solid var(--text); outline-offset: 2px; }
+.hm-legend .lg-done { background: var(--accent); }
+@media (max-width: 380px) { .ch-hero { flex-direction: column; align-items: flex-start; } }

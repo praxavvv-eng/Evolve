@@ -121,3 +121,17 @@ input.cp-range.cp-sat::-moz-range-track { background: linear-gradient(90deg, #88
 input.cp-range.cp-light::-moz-range-track { background: linear-gradient(90deg, #222, var(--accent), #ddd); }
 .accent-preview { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 14px; border-radius: 18px; background: var(--surface-2); border: 1px dashed var(--line-strong); }
 .accent-preview .bar { flex: 1; min-width: 80px; }
+
+/* ---------- V8 shared bits ---------- */
+.disclose > summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-weight: 620; }
+.disclose > summary::-webkit-details-marker { display: none; }
+.disclose > summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid var(--text-3); border-bottom: 2px solid var(--text-3); transform: rotate(45deg); transition: transform var(--t-med) var(--ease); margin-right: 4px; }
+.disclose[open] > summary::after { transform: rotate(-135deg); }
+.disclose > :not(summary) { animation: rise var(--t-med) var(--ease) both; }
+.health { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.health-row { display: flex; align-items: center; gap: 10px; } .health-row .link-btn { margin-left: auto; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); flex: none; }
+.dot.is-idle { background: var(--pos); } .dot.is-syncing, .dot.is-connecting { background: var(--info); } .dot.is-error { background: var(--neg); } .dot.is-offline { background: var(--warn); }
+.wallet-note { font-size: 0.78rem; color: rgba(246, 239, 224, 0.6); margin-top: auto; padding-top: 18px; position: relative; z-index: 1; }
+.is-nudge { animation: nudge 360ms var(--ease); }
+@keyframes nudge { 30% { transform: translateY(-6px); } 60% { transform: translateY(2px); } }

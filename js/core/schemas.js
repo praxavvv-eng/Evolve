@@ -4,6 +4,7 @@
  *   when(v)    -> field only shown while the predicate is true
  */
 import { todayStr, monthKey } from './utils.js';
+import { HABIT_COLORS } from '../storage/migration.js';
 
 export const OPTIONS = {
   taskCategory: ['Personal', 'Academics', 'Fitness', 'Work', 'Finance', 'Learning', 'Other'],
@@ -44,9 +45,10 @@ export const schemas = {
   },
   habit: {
     list: 'habits', label: 'habit', icon: 'repeat', title: r => r.name,
-    defaults: () => ({ icon: '✦', target: 1, unit: 'times', schedule: 'Daily' }),
+    defaults: () => ({ icon: '✦', target: 1, unit: 'times', schedule: 'Daily', color: HABIT_COLORS[0].hex }),
     fields: [
       { name: 'name', label: 'Habit', type: 'text', required: true, placeholder: 'e.g. Read 10 pages', max: 80 },
+      { name: 'color', label: 'Colour', type: 'colors', options: HABIT_COLORS },
       { name: 'icon', label: 'Symbol', type: 'text', half: true, max: 4, placeholder: '✦' },
       { name: 'schedule', label: 'Schedule', type: 'select', options: OPTIONS.habitSchedule, half: true },
       { name: 'target', label: 'Daily target', type: 'number', min: 1, step: 1, half: true },
@@ -160,7 +162,7 @@ export const schemas = {
       { name: 'estimatedHours', label: 'Estimated total hours', type: 'number', min: 0, step: 'any', half: true, placeholder: 'Optional' },
       { name: 'rating', label: 'Rating (1–10)', type: 'number', min: 1, max: 10, step: 1 },
       { name: 'progress', label: 'Progress (manual)', type: 'range', min: 0, max: 100, step: 5, suffix: '%', hint: 'Add estimated total hours and progress is calculated from your playtime instead.', when: v => v.status !== 'Completed' && !(Number(v.estimatedHours) > 0) },
-      { name: 'cover', label: 'Cover art', type: 'cover', hint: 'Optional. Choose an image from your device; a designed cover is used otherwise.' },
+      { name: 'cover', label: 'Cover art', type: 'cover', ratio: 3 / 4, hint: 'Optional. Choose an image from your device; a designed cover is used otherwise.' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 1500, placeholder: 'Optional' }
     ]
   },
@@ -174,6 +176,7 @@ export const schemas = {
       { name: 'rating', label: 'Rating (1–5)', type: 'number', min: 0, max: 5, step: 1, half: true },
       { name: 'currentPage', label: 'Current page', type: 'number', min: 0, step: 1, half: true },
       { name: 'totalPages', label: 'Total pages', type: 'number', min: 0, step: 1, half: true },
+      { name: 'cover', label: 'Cover', type: 'cover', ratio: 2 / 3, hint: 'Optional. Stored sharp at up to 600 × 900.' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 3, max: 3000, placeholder: 'Takeaways, quotes you wrote yourself…' }
     ]
   },
@@ -198,6 +201,28 @@ export const schemas = {
       { name: 'targetDate', label: 'Target date', type: 'date' },
       { name: 'progress', label: 'Progress', type: 'range', min: 0, max: 100, step: 5, suffix: '%', hint: 'With milestones, progress follows the checked milestones.' },
       { name: 'milestones', label: 'Milestones', type: 'textarea', rows: 3, placeholder: 'One per line', hint: 'Optional. Up to 20.' }
+    ]
+  }
+  ,
+  event: {
+    list: 'events', label: 'event', icon: 'calendar', title: r => r.title,
+    defaults: () => ({ date: todayStr() }),
+    fields: [
+      { name: 'title', label: 'Event', type: 'text', required: true, placeholder: 'What is happening?', max: 120 },
+      { name: 'date', label: 'Date', type: 'date', required: true, quick: true },
+      { name: 'startTime', label: 'Starts', type: 'time', required: true, half: true },
+      { name: 'endTime', label: 'Ends (optional)', type: 'time', half: true, clearable: true },
+      { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 600, placeholder: 'Optional' }
+    ]
+  },
+  challenge: {
+    list: 'challenges', label: 'challenge', icon: 'shield', title: r => r.name,
+    defaults: () => ({ startDate: todayStr(), targetDays: 30 }),
+    fields: [
+      { name: 'name', label: 'Challenge', type: 'text', required: true, placeholder: 'e.g. Read every day', max: 80 },
+      { name: 'startDate', label: 'Start date', type: 'date', required: true, half: true },
+      { name: 'targetDays', label: 'Target (days)', type: 'number', min: 1, step: 1, required: true, half: true, presets: [7, 30, 60, 90] },
+      { name: 'reward', label: 'Personal reward (optional)', type: 'text', max: 120, placeholder: 'Something to look forward to' }
     ]
   }
 };

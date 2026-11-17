@@ -6,7 +6,7 @@
 import * as State from './state.js';
 import { emit } from './events.js';
 import { todayStr, uid } from './utils.js';
-import { habitStreak, budgetSpent, bestStreak } from './stats.js';
+import { habitStreak, budgetSpent, maxChallengeStreak } from './stats.js';
 import { monthKey } from './utils.js';
 
 export const RANKS = ['Beginner', 'Explorer', 'Builder', 'Achiever', 'Specialist', 'Expert', 'Master', 'Elite', 'Legend'];
@@ -61,8 +61,8 @@ export const ACHIEVEMENTS = [
   { id: 'book', name: 'Bookworm', desc: 'Finish a book', icon: 'book', test: s => finishedBooks(s) >= 1 },
   { id: 'budget', name: 'Within budget', desc: 'Finish a month at or under a set budget', icon: 'wallet', test: s => { const cur = monthKey(todayStr()); return s.budgets.some(b => b.month < cur && b.monthlyLimit > 0 && budgetSpent(s, b) <= b.monthlyLimit && s.transactions.some(t => monthKey(t.date) === b.month)); } },
   { id: 'saver', name: 'Goal reached', desc: 'Reach a savings goal', icon: 'piggy', test: s => s.savingsGoals.some(g => g.targetAmount > 0 && g.savedAmount >= g.targetAmount) },
-  { id: 'challenge', name: 'Challenge complete', desc: 'Complete a discipline challenge', icon: 'shield', test: s => (s.nofap.history || []).some(h => h.outcome === 'completed') },
-  { id: 'streak-14', name: 'Fortnight', desc: 'Reach a 14-day discipline streak', icon: 'target', test: s => bestStreak(s.nofap) >= 14 }
+  { id: 'challenge', name: 'Challenge complete', desc: 'Complete a discipline challenge', icon: 'shield', test: s => (s.challenges || []).some(c => c.status === 'completed') },
+  { id: 'streak-14', name: 'Fortnight', desc: 'Reach a 14-day discipline streak', icon: 'target', test: s => maxChallengeStreak(s) >= 14 }
 ];
 export const unlockedMap = s => Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, Boolean(s.achievements[a.id]) || safe(a, s)]));
 function safe(a, s) { try { return a.test(s); } catch { return false; } }

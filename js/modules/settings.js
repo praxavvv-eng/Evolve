@@ -7,6 +7,7 @@ import { schemas } from '../core/schemas.js';
 import { ACCENTS, freshSettings, freshState, summarize, SCHEMA_VERSION } from '../storage/migration.js';
 import { exportBackupFile, validateBackup } from '../storage/backup.js';
 import { storageEstimate } from '../storage/storage.js';
+import { health } from '../core/syncstatus.js';
 import { esc, downloadFile, todayStr, fmtDate, fmtNum, hexToHsl, hslToHex } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { pageHead } from '../components/ui.js';
@@ -18,7 +19,15 @@ const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'JPY', 'CAD', 'AUD', 'SGD
 const seg = (key, current, options) => `<div class="seg" role="group" aria-label="${esc(key)}">${options.map(([v, l, ic]) => `<button type="button" class="${String(current) === String(v) ? 'is-on' : ''}" aria-pressed="${String(current) === String(v)}" data-action="set-pref" data-key="${key}" data-value="${v}">${ic ? icon(ic, { size: 16 }) : ''}${l}</button>`).join('')}</div>`;
 const rowSet = (label, hint, control) => `<div class="set-row"><div class="set-label"><b>${esc(label)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</div><div class="set-ctl">${control}</div></div>`;
 
-const ui = { customOpen: false };
+const ui = { customOpen: false, moreOpen: false };
+const STATUS = { off: 'Cloud sync is not connected', connecting: 'Connecting…', idle: 'Up to date', syncing: 'Syncing…', offline: 'Offline. Changes are kept on this device', error: 'Needs attention', conflict: 'Merged changes from another device' };
+function healthBlock() {
+  const when = ms => new Date(ms).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  return `<div class="health"><div class="health-row"><span class="dot is-${esc(health.status)}"></span><b>${esc(STATUS[health.status] || health.status)}</b><a class="link-btn" href="#/cloud">Cloud sync ${icon('chevron-right', { size: 14 })}</a></div>
+    <dl class="kv"><div><dt>Last successful sync</dt><dd>${health.lastOk ? esc(when(health.lastOk)) : 'Not synced yet'}</dd></div>${health.lastError ? `<div><dt>Last problem</dt><dd>${esc(health.lastError)}<br><span class="t-small">${health.lastErrorAt ? esc(when(health.lastErrorAt)) : ''}</span></dd></div>` : ''}</dl></div>`;
+}
+document.addEventListener('toggle', e => { if (e.target.matches?.('details[data-disc="more"]')) ui.moreOpen = e.target.open; }, true);
+document.addEventListener('evolve:sync', () => { if (location.hash.startsWith('#/settings')) emit('view:refresh'); });
 const MODES = [['light', 'Light'], ['dark', 'Dark'], ['amoled', 'AMOLED'], ['system', 'System']];
 const PREVIEW = { light: ['#f3f0ea', '#fffefb', '#1d1b17', 'rgba(40,32,18,.18)'], dark: ['#0f0f11', '#1a1a1e', '#f3eee5', 'rgba(255,255,255,.2)'], amoled: ['#000', '#0e0e10', '#f3eee5', 'rgba(255,255,255,.18)'] };
 function modeCard([id, label], current, accent) {
@@ -52,11 +61,12 @@ function render() {
           <label class="cp-label">Saturation<input type="range" class="cp-range cp-sat" min="0" max="100" value="${hsl[1]}" data-input="cp-slider" data-k="s" aria-label="Saturation"></label>
           <label class="cp-label">Lightness<input type="range" class="cp-range cp-light" min="25" max="85" value="${hsl[2]}" data-input="cp-slider" data-k="l" aria-label="Lightness"></label></div>
         <div class="accent-preview" aria-hidden="true"><span class="btn btn-primary btn-sm">Primary</span><span class="badge badge-accent">Accent</span><div class="bar"><span style="--w:64%"></span></div></div>
-        <p class="set-sub">Interface</p>
+        <details class="disclose" data-disc="more" ${ui.moreOpen ? 'open' : ''}><summary>Interface options</summary>
         ${rowSet('Glass effect', 'How translucent bars and sheets feel.', `<div class="range-row"><input type="range" min="0" max="100" step="5" value="${st.glass}" style="--p:${st.glass}%" data-input="set-glass" aria-label="Glass intensity"><output>${st.glass}</output></div>`)}
         ${rowSet('Density', '', seg('density', st.density, [['comfortable', 'Comfortable'], ['compact', 'Compact']]))}
         ${rowSet('Text size', '', seg('textSize', st.textSize, [['small', 'Small'], ['default', 'Default'], ['large', 'Large']]))}
         ${rowSet('Motion', 'System follows your device setting.', seg('motion', st.motion, [['system', 'System'], ['reduce', 'Reduced'], ['full', 'Full']]))}
+        </details>
         <div class="set-foot"><button class="btn btn-sm" type="button" data-action="reset-appearance">${icon('refresh', { size: 16 })} Restore default appearance</button></div></section>
 
       <section class="card card-pad set-card" style="--i:2"><div class="set-head">${icon('sliders', { size: 20 })}<h2 class="t-h2">Preferences</h2></div>
@@ -65,7 +75,8 @@ function render() {
         ${rowSet('Daily XP cap', 'Limits XP per day so levels stay meaningful.', selectHTML({ value: st.dailyXpCap, options: [50, 75, 100, 125, 150, 200].map(v => ({ value: v, label: `${v} XP` })), label: 'Daily XP cap', compact: true, dataChange: 'set-cap' }))}</section>
 
       <section class="card card-pad set-card" style="--i:3"><div class="set-head">${icon('database', { size: 20 })}<h2 class="t-h2">Your data</h2></div>
-        <p class="t-small">Everything lives in this browser only. Export a backup regularly, especially before clearing browser data.</p>
+        ${healthBlock()}
+        <p class="t-small mt-3">Your data lives on this device and syncs to the cloud when connected. Export a backup regularly.</p>
         <div class="set-actions"><button class="btn btn-primary" type="button" data-action="export-backup">${icon('download', { size: 18 })} Export backup</button>
           <label class="btn" for="import-file">${icon('upload', { size: 18 })} Import backup</label><input class="sr-only" id="import-file" type="file" accept=".json,application/json" data-change="import-file">
           <button class="btn" type="button" data-action="export-csv">${icon('receipt', { size: 18 })} Finance CSV</button></div>

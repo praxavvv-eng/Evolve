@@ -22,7 +22,9 @@ function buildIndex() {
   s.savingsGoals.forEach(g => add('Finance', 'piggy', g.name, 'Savings goal', '', () => go('#/finance')));
   s.games.forEach(g => add('Gaming', 'gamepad', g.title, `${g.platform} · ${g.status}`, g.notes, () => go(`#/gaming/${g.id}`)));
   s.books.forEach(b => add('Learning', 'book', b.title, b.author || b.status, b.notes, () => go(`#/learning/${b.id}`)));
-  s.notes.forEach(n => add('Notes', 'notebook', n.title, `${n.kind} · ${fmtDate(n.date)}`, `${n.body} ${(n.tags || []).join(' ')}`, () => openForm('note', { id: n.id })));
+  s.notes.forEach(n => add('Notes', 'notebook', n.title, `${n.kind} · ${fmtDate(n.date)}`, `${n.body} ${(n.tags || []).join(' ')}`, () => go(`#/journal/${n.id}`)));
+  s.events.forEach(e => add('Calendar', 'calendar', e.title, `${fmtDate(e.date)} · ${e.startTime}`, e.notes, () => openForm('event', { id: e.id })));
+  s.challenges.forEach(c => add('Discipline', 'shield', c.name, `${c.targetDays}-day challenge`, c.reward, () => go(`#/discipline/${c.id}`)));
   s.goals.forEach(g => add('Goals', 'target', g.title, `${g.status} · ${g.progress}%`, g.milestones?.join(' '), () => openForm('goal', { id: g.id })));
   NAV.forEach(n => add('Go to', n.icon, n.label, n.blurb, n.id, () => go(`#/${n.id}`)));
   return out;
@@ -56,7 +58,7 @@ export function openSearch() {
   }
   const mv = d => { const items = [...list.querySelectorAll('.pal-item')]; if (!items.length) return; items[active]?.classList.remove('is-active'); active = (active + d + items.length) % items.length; items[active].classList.add('is-active'); items[active].setAttribute('aria-selected', 'true'); items[active].scrollIntoView({ block: 'nearest' }); };
   const run = k => { const r = results[k]; if (!r) return; api.close(); setTimeout(() => r.run(), 40); };
-  input.addEventListener('input', draw);
+  let timer; input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 70); });   // keep typing instant on large workspaces
   input.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); mv(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); mv(-1); } else if (e.key === 'Enter') { e.preventDefault(); run(active); } });
   list.addEventListener('click', e => { const b = e.target.closest('.pal-item'); if (b) run(Number(b.dataset.k)); });
   draw(); setTimeout(() => input.focus(), 30);
@@ -64,7 +66,7 @@ export function openSearch() {
 
 /* ---------------- quick add ---------------- */
 const PRIMARY = [['task', 'Task', 'check-square', {}], ['habit', 'Habit', 'repeat', {}], ['transaction', 'Transaction', 'receipt', {}], ['workout', 'Workout', 'dumbbell', {}], ['game', 'Game', 'gamepad', {}], ['academic', 'Academic item', 'graduation', {}], ['note', 'Note', 'notebook', {}]];
-const MORE = [['goal', 'Goal', 'target', {}], ['subject', 'Subject', 'graduation', {}], ['budget', 'Budget', 'wallet', {}], ['savingsGoal', 'Savings goal', 'piggy', {}], ['book', 'Book', 'book', {}], ['workoutTemplate', 'Workout plan', 'list', {}], ['bodyMetric', 'Measurement', 'trending-up', {}]];
+const MORE = [['event', 'Event', 'calendar', {}], ['challenge', 'Challenge', 'shield', {}], ['book', 'Book', 'book', {}], ['goal', 'Goal', 'target', {}], ['subject', 'Subject', 'graduation', {}], ['budget', 'Budget', 'wallet', {}], ['savingsGoal', 'Savings goal', 'piggy', {}], ['workoutTemplate', 'Workout plan', 'list', {}], ['bodyMetric', 'Measurement', 'trending-up', {}]];
 
 export function openQuickAdd() {
   const tile = ([type, label, ic]) => `<button type="button" class="quick-item" data-type="${type}"><span class="row-lead">${icon(ic, { size: 18 })}</span>${esc(label)}</button>`;

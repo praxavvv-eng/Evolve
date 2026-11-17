@@ -34,7 +34,7 @@
 .view.is-entering > * { animation: rise var(--t-slow) var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
 .view.is-entering.is-detail > * { animation-name: slide-in; }
 
-.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 6px 0 18px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 10px 0 22px; }
 .page-head .t-title { margin-bottom: 4px; }
 .page-head-actions { display: flex; gap: 8px; flex: none; align-items: center; }
 .eyebrow { font-size: 0.78rem; font-weight: 600; color: var(--text-3); letter-spacing: 0.01em; margin-bottom: 4px; }
@@ -91,8 +91,7 @@
 
 /* module glow behind each screen */
 .view { position: relative; isolation: isolate; }
-.view::before { content: ""; position: absolute; z-index: -1; inset: -70px 0 auto; height: 340px; pointer-events: none; background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.17), transparent 72%); }
-[data-scheme="light"] .view::before { background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.12), transparent 72%); }
+.view::before { content: ""; position: absolute; z-index: -1; inset: -70px 0 auto; height: 300px; pointer-events: none; background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.09), transparent 72%); }
+[data-scheme="light"] .view::before { background: radial-gradient(70% 100% at 50% 0%, rgba(var(--mod-rgb), 0.07), transparent 72%); }
 .ph-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .ph-ico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; color: rgb(var(--mod-rgb)); background: rgba(var(--mod-rgb), 0.14); }
-.page-head h1 { background: linear-gradient(180deg, var(--text), color-mix(in srgb, var(--text) 78%, transparent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

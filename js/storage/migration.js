@@ -13,6 +13,11 @@ export const ACCENTS = {
   ice: { name: 'Ice', hex: '#9DBBD0' },
   rose: { name: 'Clay rose', hex: '#CDA39B' }
 };
+export const HABIT_COLORS = [
+  { id: 'green', name: 'Green', hex: '#5cc28a' }, { id: 'blue', name: 'Blue', hex: '#5b9df0' }, { id: 'orange', name: 'Orange', hex: '#f0974a' },
+  { id: 'teal', name: 'Teal', hex: '#3fc1b5' }, { id: 'gold', name: 'Gold', hex: '#e5c25b' }, { id: 'coral', name: 'Coral', hex: '#e36f6f' },
+  { id: 'rose', name: 'Rose', hex: '#e58db0' }, { id: 'steel', name: 'Steel', hex: '#9fb2c8' }
+];
 export const XP_CATEGORIES = ['consistency', 'academics', 'fitness', 'finance', 'gaming', 'learning', 'personal'];
 
 export const freshSettings = () => ({
@@ -33,12 +38,12 @@ export const freshState = () => ({
   tasks: [], habits: [], habitLogs: {}, habitXPLogs: {},
   subjects: [], academicItems: [], workoutLogs: [], workoutTemplates: [], bodyMetrics: [],
   transactions: [], budgets: [], savingsGoals: [], games: [], books: [],
-  notes: [], goals: [], disciplineLogs: [], activityLog: [], trashBin: [],
+  notes: [], goals: [], disciplineLogs: [], activityLog: [], trashBin: [], challenges: [], events: [],
   removedFeaturesArchive: {}, removedModulesArchive: {}, ui: {}
 });
 
 /** Every list that holds records with ids. */
-export const LISTS = ['tasks', 'habits', 'subjects', 'academicItems', 'workoutLogs', 'workoutTemplates', 'bodyMetrics', 'transactions', 'budgets', 'savingsGoals', 'games', 'books', 'notes', 'goals', 'disciplineLogs', 'activityLog', 'trashBin'];
+export const LISTS = ['tasks', 'habits', 'subjects', 'academicItems', 'workoutLogs', 'workoutTemplates', 'bodyMetrics', 'transactions', 'budgets', 'savingsGoals', 'games', 'books', 'notes', 'goals', 'disciplineLogs', 'activityLog', 'trashBin', 'challenges', 'events'];
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
 const n0 = v => Math.max(0, Number(v) || 0);
 const lines = v => (Array.isArray(v) ? v : String(v || '').split(/\r?\n/)).map(x => String(x).trim()).filter(Boolean);
@@ -156,6 +161,27 @@ export function normalizeState(input) {
   out.notes = out.notes.map(x => ({ ...x, tags: (Array.isArray(x.tags) ? x.tags : String(x.tags || '').split(',')).map(t => String(t).trim()).filter(Boolean).slice(0, 12) }));
   out.games = out.games.map(normGame);
   out.savingsGoals = out.savingsGoals.map(x => ({ ...x, name: String(x.name || 'Savings goal'), targetAmount: n0(x.targetAmount), savedAmount: n0(x.savedAmount) }));
+  /* habit colours: legacy habits get a stable colour by position; nothing else about them changes */
+  out.habits.forEach((h, i) => { if (!/^#[0-9a-f]{6}$/i.test(h.color || '')) h.color = HABIT_COLORS[i % HABIT_COLORS.length].hex; if (!h.createdAt) delete h.createdAt; });
+
+  /* calendar events */
+  const T = /^([01]\d|2[0-3]):[0-5]\d$/;
+  out.events = out.events.filter(e => isDateStr(e.date) && T.test(e.startTime || '')).map(e => ({ ...e, title: String(e.title || 'Event'), endTime: T.test(e.endTime || '') && e.endTime > e.startTime ? e.endTime : '', notes: String(e.notes || '') }));
+
+  /* challenges: the V6/V7 single tracker becomes the first challenge once; the original tracker data stays untouched */
+  const rawChallenges = src.challenges;
+  if (!Array.isArray(rawChallenges)) {
+    const logs = {};
+    Object.entries(out.nofap.dailyLogs || {}).forEach(([d, e]) => { if (e && (e.status === 'on-track' || e.status === 'slip')) logs[d] = { status: e.status === 'slip' ? 'slip' : 'done', note: String(e.note || '') }; });
+    const days = Object.keys(logs).sort();
+    const hasLegacy = days.length || out.nofap.startedAt || (out.nofap.history || []).length;
+    out.challenges = hasLegacy ? [{ id: 'ch_legacy_nofap', name: 'No Fap', startDate: isDateStr(out.nofap.startedAt) && (!days.length || out.nofap.startedAt <= days[0]) ? out.nofap.startedAt : (days[0] || todayStr()), targetDays: Number(out.nofap.targetDays) || 30, reward: String(out.nofap.personalReward || ''), logs, status: out.nofap.completedAt && !out.nofap.active ? 'completed' : 'active', completedAt: out.nofap.completedAt || '', legacy: 'nofap', createdAt: out.createdAt || new Date().toISOString() }] : [];
+  }
+  out.challenges = out.challenges.filter(c => c && typeof c === 'object').map(c => {
+    const logs = {};
+    Object.entries(isObj(c.logs) ? c.logs : {}).forEach(([d, e]) => { if (isDateStr(d) && e && (e.status === 'done' || e.status === 'slip')) logs[d] = { status: e.status, note: String(e.note || '') }; });
+    return { ...c, name: String(c.name || 'Challenge'), startDate: isDateStr(c.startDate) ? c.startDate : todayStr(), targetDays: Math.max(1, Math.round(Number(c.targetDays)) || 30), reward: String(c.reward || ''), logs, status: ['active', 'completed'].includes(c.status) ? c.status : 'active' };
+  });
   out.tasks.forEach(t => { if (!t.title) t.title = 'Untitled task'; t.dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(t.dueTime || '') && t.due ? t.dueTime : ''; });
   out.academicItems.forEach(x => { x.dueTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(x.dueTime || '') && x.due ? x.dueTime : ''; });
   out.habits.forEach(h => { if (!h.name) h.name = 'Habit'; });

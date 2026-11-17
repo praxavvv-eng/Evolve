@@ -2,6 +2,7 @@
 import * as State from '../core/state.js';
 import { registerActions, registerChange } from '../core/events.js';
 import { toggleTask } from '../core/records.js';
+import { todaysTasks } from '../core/stats.js';
 import { esc, todayStr, relDay, isDateStr, fmtTime } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { pageHead, emptyState, addBtn, kebab, badge } from '../components/ui.js';
@@ -49,8 +50,9 @@ function render() {
   else if (ui.filter === 'upcoming') body = upcoming.length ? group('Upcoming', upcoming) : `<div class="card">${emptyState({ icon: 'calendar', title: 'Nothing scheduled ahead', text: 'Tasks with a future due date appear here.' })}</div>`;
   else body = (open.length ? group('Overdue', overdue, 'neg') + group('Today', todayList) + group('Upcoming', upcoming) + group('No date', nodate) : `<div class="card">${emptyState({ icon: 'sparkles', title: 'All caught up', text: 'No open tasks. Add something new or enjoy the quiet.', action: addBtn('task', 'Add a task') })}</div>`);
 
-  return `${pageHead({ title: 'Plan', sub: s.tasks.length ? `${counts.open} open · ${s.tasks.filter(t => t.done).length} done` : 'Tasks and priorities', actions: addBtn('task', 'Task') })}
+  return `${pageHead({ title: 'Tasks', sub: s.tasks.length ? `${counts.open} open · ${s.tasks.filter(t => t.done).length} done` : 'Tasks and priorities', actions: addBtn('task', 'Task') })}
     <div class="stack-lg">
+      ${(() => { const d = todaysTasks(s), n = d.filter(t => t.done).length; return d.length ? `<div class="day-progress" style="--i:1"><div class="between"><span class="t-small">Today · ${n} of ${d.length} done${overdue.length ? ` · ${overdue.length} overdue` : ''}</span><b class="t-num t-small">${Math.round((n / d.length) * 100)}%</b></div><div class="bar mt-2"><span style="--w:${(n / d.length) * 100}%"></span></div></div>` : ''; })()}
       <div class="chips" style="--i:1" role="group" aria-label="Filter tasks">${chip('open', 'Open')}${chip('today', 'Today')}${chip('upcoming', 'Upcoming')}${chip('done', 'Done')}</div>
       <div class="between" style="--i:1"><span class="t-small">Area</span>${selectHTML({ value: ui.area, options: ['All', ...OPTIONS.taskCategory], label: 'Filter by area', compact: true, dataChange: 'plan-area' })}</div>
       <div class="stack">${body}</div></div>`;

@@ -1,17 +1,8 @@
 
 /* Central workspace state. One object, saved to localStorage after every update(). */
-import {
-  loadWorkspace,
-  persist,
-  KEY_PRE_IMPORT,
-  writeRaw,
-  readRaw
-} from '../storage/storage.js';
+import { loadWorkspace, persist, KEY_PRE_IMPORT, writeRaw, readRaw } from '../storage/storage.js';
 
-import {
-  freshState,
-  normalizeState
-} from '../storage/migration.js';
+import { freshState, normalizeState } from '../storage/migration.js';
 
 import { emit } from './events.js';
 import { setCurrency } from './utils.js';

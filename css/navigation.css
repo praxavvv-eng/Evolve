@@ -19,9 +19,6 @@
 .tab .i { transition: transform var(--t-med) var(--spring); }
 .tab[aria-current="page"] .i { transform: translateY(-1px) scale(1.08); }
 .tab-indicator { position: absolute; z-index: 0; top: 8px; bottom: 8px; left: 0; width: var(--w, 0); transform: translateX(var(--x, 0)); border-radius: 20px; background: var(--accent-soft); opacity: var(--o, 0); transition: transform var(--t-med) var(--ease), width var(--t-med) var(--ease), opacity var(--t-med); pointer-events: none; }
-.tab-add { display: grid; place-items: center; height: 100%; z-index: 1; }
-.tab-add .fab { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3); transition: transform var(--t-med) var(--spring); }
-.tab-add:active .fab { transform: scale(0.9) rotate(45deg); }
 
 /* ---------- sidebar ---------- */
 .sidebar { display: none; }
@@ -54,14 +51,26 @@
   .sb-item .i-wrap { display: grid; place-items: center; width: 22px; }
 }
 
-/* ---------- library page (phone destination listing every module once) ---------- */
-.lib-group + .lib-group { margin-top: 22px; }
-.lib-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.lib-tile { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--highlight); transition: transform var(--t-fast) var(--ease), border-color var(--t-fast); min-height: 112px; }
-.lib-tile:active { transform: scale(0.97); }
-.lib-tile:hover { border-color: var(--line-strong); }
-.lib-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; color: var(--accent-text); background: var(--accent-soft); }
-.lib-tile b { font-size: 0.97rem; font-weight: 620; letter-spacing: -0.01em; display: block; }
-.lib-tile small { font-size: 0.78rem; color: var(--text-3); display: block; margin-top: 2px; }
-@media (min-width: 720px) { .lib-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 900px) { .lib-only { display: none; } }
+/* ---------- V8: iOS-style tab bar, floating add button, sub-navigation, hub sidebar ---------- */
+.tabbar { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; transform: none; height: calc(var(--nav-h) + var(--safe-b)); padding: 0 6px var(--safe-b); border-radius: 0; border: 0; border-top: 1px solid var(--line); box-shadow: none; grid-template-columns: repeat(5, 1fr); }
+.tab-indicator { display: none; }
+.tab { font-size: 0.66rem; gap: 4px; }
+.tab[aria-current="page"] .i { transform: none; }
+.subnav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 14px; margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav a { flex: none; min-height: 36px; padding: 0 15px; display: inline-flex; align-items: center; border-radius: 99px; font-size: 0.92rem; font-weight: 600; color: var(--text-3); transition: background var(--t-med) var(--ease), color var(--t-med); }
+.subnav a:hover { color: var(--text); }
+.subnav a[aria-current="page"] { background: var(--surface-2); color: var(--text); }
+@media (min-width: 900px) {
+  #addIcon { display: none; }
+  .subnav { margin-inline: 0; padding-inline: 0; }
+  .sb-hub .sb-children { display: none; flex-direction: column; gap: 1px; margin: 2px 0 8px 21px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .sb-hub.is-open .sb-children { display: flex; }
+  .sb-sub { display: flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 560; color: var(--text-3); }
+  .sb-sub:hover { color: var(--text); background: var(--surface-2); }
+  .sb-sub[aria-current="page"] { color: var(--accent-text); font-weight: 650; }
+  .sb-sub .i-wrap { display: none; }
+  .app[data-sidebar="collapsed"] .sb-children { display: none !important; }
+  .sb-scroll { gap: 4px; }
+}
+@media (max-width: 899px) { :root { --nav-h: 56px; --nav-space: calc(var(--nav-h) + var(--safe-b) + 40px); } .toasts { bottom: calc(var(--nav-h) + var(--safe-b) + 20px); } }

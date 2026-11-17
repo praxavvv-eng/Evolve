@@ -21,7 +21,7 @@ const rules = {
     return { r, e };
   },
   habit(raw) {
-    const e = {}, r = { name: str(raw.name, 80), icon: str(raw.icon, 4) || '✦', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule: oneOf(raw.schedule, OPTIONS.habitSchedule, 'Daily') };
+    const e = {}, r = { name: str(raw.name, 80), color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? String(raw.color).toLowerCase() : '#5cc28a', icon: str(raw.icon, 4) || '✦', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule: oneOf(raw.schedule, OPTIONS.habitSchedule, 'Daily') };
     if (!r.name) e.name = 'Give the habit a name.';
     return { r, e };
   },
@@ -116,7 +116,7 @@ const rules = {
     const e = {};
     const total = Math.max(0, int(raw.totalPages));
     let current = Math.max(0, int(raw.currentPage)), status = oneOf(raw.status, OPTIONS.bookStatus, 'To read');
-    const r = { title: str(raw.title, 150), author: str(raw.author, 100), status, totalPages: total, currentPage: current, rating: clamp(int(raw.rating), 0, 5), notes: str(raw.notes, 3000) };
+    const r = { title: str(raw.title, 150), author: str(raw.author, 100), status, totalPages: total, currentPage: current, rating: clamp(int(raw.rating), 0, 5), cover: typeof raw.cover === 'string' ? raw.cover.slice(0, 450000) : '', notes: str(raw.notes, 3000) };
     if (!r.title) e.title = 'Enter the book title.';
     if (total && current > total) e.currentPage = `Cannot be more than ${total}.`;
     if (!e.currentPage) {
@@ -124,6 +124,22 @@ const rules = {
       else if (status === 'Finished' && total) r.currentPage = total;
       else if (status === 'To read' && current > 0) r.status = 'Reading';
     }
+    return { r, e };
+  },
+  event(raw) {
+    const e = {}, r = { title: str(raw.title, 120), date: raw.date, startTime: isTimeStr(raw.startTime) ? raw.startTime : '', endTime: isTimeStr(raw.endTime) ? raw.endTime : '', notes: str(raw.notes, 600) };
+    if (!r.title) e.title = 'Name the event.';
+    requireDate(raw, 'date', e);
+    if (!r.startTime) e.startTime = 'Choose a start time.';
+    if (r.endTime && r.startTime && r.endTime <= r.startTime) e.endTime = 'The end must be after the start.';
+    return { r, e };
+  },
+  challenge(raw, { existing }) {
+    const e = {}, days = Math.round(num(raw.targetDays));
+    const r = { name: str(raw.name, 80), startDate: raw.startDate, targetDays: days, reward: str(raw.reward, 120), logs: existing?.logs || {}, status: existing?.status || 'active' };
+    if (!r.name) e.name = 'Name this challenge.';
+    requireDate(raw, 'startDate', e, 'a start date');
+    if (!(days >= 1 && days <= 3650)) e.targetDays = 'Enter between 1 and 3650 days.';
     return { r, e };
   },
   note(raw) {

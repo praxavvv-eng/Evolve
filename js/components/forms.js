@@ -33,7 +33,7 @@ function fieldHTML(f, values, fid, errors) {
   const id = `${fid}-${f.name}`, v = values[f.name] ?? '';
   const err = errors[f.name];
   const cls = `field ${f.half ? 'is-half' : ''} ${f.big ? 'field-big' : ''} ${err ? 'has-error' : ''}`;
-  const labelText = f.type === 'segmented' || f.type === 'cover' ? `<span class="field-label">${esc(f.label)}</span>` : `<label for="${id}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
+  const labelText = f.type === 'segmented' || f.type === 'cover' || f.type === 'colors' ? `<span class="field-label">${esc(f.label)}</span>` : `<label for="${id}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
   const label = f.clearable ? `<div class="label-row">${labelText}<button type="button" class="mini-link" data-clear="${f.name}" ${v ? '' : 'hidden'}>Clear</button></div>` : labelText;
   let ctl = '';
   switch (f.type) {
@@ -47,6 +47,9 @@ function fieldHTML(f, values, fid, errors) {
       ctl = `<div class="seg" role="radiogroup" aria-label="${esc(f.label)}">${opts.map(o => `<label><input type="radio" name="${f.name}" value="${esc(o.value)}" ${String(v) === String(o.value) ? 'checked' : ''}>${esc(o.label)}</label>`).join('')}</div>`;
       break;
     }
+    case 'colors':
+      ctl = `<div class="color-pick" role="radiogroup" aria-label="${esc(f.label)}">${f.options.map(o => `<label class="color-opt" title="${esc(o.name)}" style="--c:${o.hex}"><input type="radio" name="${f.name}" value="${o.hex}" ${String(v).toLowerCase() === o.hex ? 'checked' : ''} aria-label="${esc(o.name)}"><span>${icon('check', { size: 16 })}</span></label>`).join('')}</div>`;
+      break;
     case 'range': {
       const val = clamp(v, f.min, f.max);
       ctl = `<div class="range-row"><input type="range" id="${id}" name="${f.name}" min="${f.min}" max="${f.max}" step="${f.step || 1}" value="${val}" style="--p:${((val - f.min) / (f.max - f.min)) * 100}%"><output for="${id}">${val}${f.suffix || ''}</output></div>`;
@@ -64,7 +67,8 @@ function fieldHTML(f, values, fid, errors) {
       const type = f.type === 'number' ? 'number' : f.type;
       const attrs = f.type === 'number' ? `inputmode="decimal" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.max !== undefined ? `max="${f.max}"` : ''} step="${f.step || 'any'}"` : `maxlength="${f.max || 200}"`;
       const input = `<input id="${id}" name="${f.name}" type="${type}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${attrs} autocomplete="off" ${err ? 'aria-invalid="true"' : ''}>`;
-      ctl = f.prefix ? `<div class="prefix-wrap"><span class="prefix">${esc(currencySymbol())}</span>${input}</div>` : input;
+      ctl = f.prefix ? `<div class="amount-wrap"><span class="amount-sym" aria-hidden="true">${esc(currencySymbol())}</span>${input}</div>` : input;
+      if (f.presets) ctl += `<div class="suggest quick-presets" aria-label="Presets">${f.presets.map(n => `<button type="button" data-preset="${n}">${n}</button>`).join('')}</div>`;
       if (f.quick) ctl += `<div class="suggest quick-dates" aria-label="Quick dates">${[['Today', 0], ['Tomorrow', 1], ['+1 week', 7]].map(([l, n]) => `<button type="button" data-quick="${n}">${l}</button>`).join('')}</div>`;
       if (f.suggest === 'exercises') {
         const names = exerciseSummaries(State.get()).slice(0, 6).map(s => s.name);
@@ -86,7 +90,7 @@ export function collect(form) {
 
 /* ---------- image helpers ---------- */
 /** Poster pipeline: centre-crop to 3:4, step-down scaling for sharp results, JPEG sized to stay practical for storage and cloud sync. */
-function readCover(file) {
+function readCover(file, R = 3 / 4) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read that image.'));
@@ -94,7 +98,6 @@ function readCover(file) {
       const img = new Image();
       img.onerror = () => reject(new Error('That file is not a usable image.'));
       img.onload = () => {
-        const R = 3 / 4;
         let cw = img.width, ch = cw / R;
         if (ch > img.height) { ch = img.height; cw = ch * R; }
         const sx = (img.width - cw) / 2, sy = (img.height - ch) / 2;
@@ -110,7 +113,7 @@ function readCover(file) {
         ox.fillStyle = '#000'; ox.fillRect(0, 0, outW, outH);
         ox.drawImage(cur, 0, 0, outW, outH);
         let q = 0.88, data = out.toDataURL('image/jpeg', q);
-        while (data.length > 150000 && q > 0.62) { q -= 0.06; data = out.toDataURL('image/jpeg', q); }
+        while (data.length > 190000 && q > 0.66) { q -= 0.06; data = out.toDataURL('image/jpeg', q); }
         resolve(data);
       };
       img.src = reader.result;
@@ -177,6 +180,10 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
       const cur = collect(form), field = cur.type === 'Practical' ? 'practicalNo' : 'assignmentNo';
       const el = form.elements[field]; if (el && !el.dataset.touched) el.value = nextFreeNo(cur.subject, cur.type);
     };
+    let dirty = false;
+    api.guard = () => !dirty;                                // taps outside the sheet never discard typed data
+    form.addEventListener('input', () => { dirty = true; }, { once: true });
+    form.addEventListener('focusin', e => { if (e.target.matches('input,textarea,.dd-trigger')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320); });   // keep the active field above the keyboard
     form.addEventListener('input', e => {
       if (e.target.name === 'assignmentNo' || e.target.name === 'practicalNo') e.target.dataset.touched = '1';
       if (e.target.type === 'range') {
@@ -195,6 +202,8 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
     form.addEventListener('click', e => {
       const qd = e.target.closest('[data-quick]');
       if (qd) { const inp = qd.closest('[data-field]').querySelector('input[type=date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); }
+      const ps = e.target.closest('[data-preset]');
+      if (ps) { const inp = ps.closest('[data-field]').querySelector('input'); inp.value = ps.dataset.preset; inp.dispatchEvent(new Event('input', { bubbles: true })); }
       const cl = e.target.closest('[data-clear]');
       if (cl) { const inp = cl.closest('[data-field]').querySelector('input'); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); }
       const s = e.target.closest('[data-suggest]');
@@ -204,7 +213,7 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
     form.querySelector('[data-cover-file]')?.addEventListener('change', async e => {
       const file = e.target.files[0]; if (!file) return;
       try {
-        const data = await readCover(file);
+        const data = await readCover(file, defs.find(d => d.type === 'cover')?.ratio || 3 / 4);
         form.elements.cover.value = data;
         const t = form.querySelector('[data-cover-thumb]'); t.style.backgroundImage = `url('${data}')`; t.innerHTML = '';
         form.querySelector('[data-cover-clear]').hidden = false;
