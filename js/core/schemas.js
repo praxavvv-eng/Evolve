@@ -17,6 +17,8 @@ export const OPTIONS = {
   focus: ['Full body', 'Upper body', 'Lower body', 'Push', 'Pull', 'Legs', 'Cardio', 'Custom'],
   txType: ['expense', 'income'],
   txCategory: ['Food', 'Transport', 'Shopping', 'Education', 'Entertainment', 'Bills', 'Health', 'Salary', 'Gift', 'Other'],
+  expenseCategory: ['Food', 'Transport', 'Shopping', 'Education', 'Entertainment', 'Bills', 'Health', 'Gift', 'Other'],
+  incomeCategory: ['Salary', 'Gift', 'Other'],
   budgetCategory: ['Food', 'Transport', 'Shopping', 'Education', 'Entertainment', 'Bills', 'Health', 'Other'],
   recurrence: ['None', 'Weekly', 'Monthly', 'Yearly'],
   platform: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch', 'Mobile', 'Other'],
@@ -27,32 +29,40 @@ export const OPTIONS = {
   goalStatus: ['In progress', 'Completed', 'On hold']
 };
 const opt = (label, value) => ({ value, label });
+export const CAT_ICONS = { Food: 'utensils', Transport: 'car', Shopping: 'bag', Education: 'graduation', Entertainment: 'film', Bills: 'receipt', Health: 'heart', Salary: 'briefcase', Gift: 'gift', Other: 'tag' };
+export const PRIORITY_COLORS = { Low: 'var(--info)', Medium: 'var(--warn)', High: 'var(--neg)' };
+export const WEEKDAYS = [{ v: 1, l: 'M', n: 'Monday' }, { v: 2, l: 'T', n: 'Tuesday' }, { v: 3, l: 'W', n: 'Wednesday' }, { v: 4, l: 'T', n: 'Thursday' }, { v: 5, l: 'F', n: 'Friday' }, { v: 6, l: 'S', n: 'Saturday' }, { v: 0, l: 'S', n: 'Sunday' }];
 export const TX_TYPE_OPTIONS = [opt('Expense', 'expense'), opt('Income', 'income')];
 
 export const schemas = {
   task: {
     list: 'tasks', label: 'task', icon: 'check-square', title: r => r.title,
+    form: { layout: 'compact', create: 'New task', submit: 'Add task' },
     defaults: () => ({ due: todayStr(), priority: 'Medium', category: 'Personal', repeat: 'None' }),
     fields: [
-      { name: 'title', label: 'Task', type: 'text', required: true, placeholder: 'What needs doing?', max: 150 },
+      { name: 'title', label: 'Task', type: 'text', required: true, placeholder: 'What needs doing?', max: 150, cls: 't-big' },
+      { name: 'priority', label: 'Priority', type: 'pills', options: ['Low', 'Medium', 'High'].map(v => ({ value: v, label: v, color: PRIORITY_COLORS[v] })) },
       { name: 'due', label: 'Date', type: 'date', half: true, quick: true, clearable: true },
       { name: 'dueTime', label: 'Time (optional)', type: 'time', half: true, clearable: true },
-      { name: 'priority', label: 'Priority', type: 'select', options: OPTIONS.priority, half: true },
       { name: 'category', label: 'Area', type: 'select', options: OPTIONS.taskCategory, half: true },
-      { name: 'repeat', label: 'Repeat', type: 'select', options: OPTIONS.repeat },
+      { name: 'repeat', label: 'Repeat', type: 'select', options: OPTIONS.repeat, half: true },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 1000, placeholder: 'Optional' }
     ]
   },
   habit: {
     list: 'habits', label: 'habit', icon: 'repeat', title: r => r.name,
-    defaults: () => ({ icon: '✦', target: 1, unit: 'times', schedule: 'Daily', color: HABIT_COLORS[0].hex }),
+    form: { layout: 'compact', create: 'New habit', submit: 'Create habit' },
+    defaults: () => ({ icon: '✦', target: 1, unit: 'times', schedule: 'Daily', color: HABIT_COLORS[0].hex, days: [1, 2, 3, 4, 5, 6, 0], perWeek: 3 }),
     fields: [
-      { name: 'name', label: 'Habit', type: 'text', required: true, placeholder: 'e.g. Read 10 pages', max: 80 },
+      { name: 'name', label: 'Habit', type: 'text', required: true, placeholder: 'e.g. Read 10 pages', max: 80, cls: 't-big' },
       { name: 'color', label: 'Colour', type: 'colors', options: HABIT_COLORS },
-      { name: 'icon', label: 'Symbol', type: 'text', half: true, max: 4, placeholder: '✦' },
-      { name: 'schedule', label: 'Schedule', type: 'select', options: OPTIONS.habitSchedule, half: true },
-      { name: 'target', label: 'Daily target', type: 'number', min: 1, step: 1, half: true },
-      { name: 'unit', label: 'Unit', type: 'select', options: OPTIONS.habitUnit, half: true }
+      { name: 'schedule', label: 'Schedule', type: 'select', options: [{ value: 'Daily', label: 'Every day' }, { value: 'Weekdays', label: 'Weekdays (Mon–Fri)' }, { value: 'Weekends', label: 'Weekends' }, { value: '3 days / week', label: 'Flexible: some days each week' }, { value: 'Custom', label: 'Specific days' }] },
+      { name: 'days', label: 'Days', type: 'weekdays', when: v => v.schedule === 'Custom', hint: 'Days you do not choose never break the streak.' },
+      { name: 'perWeek', label: 'Days per week', type: 'stepper', min: 1, max: 6, step: 1, when: v => v.schedule === '3 days / week', hint: 'Any days count. The streak counts weeks that reach this number.' },
+      { name: 'description', label: 'Description', type: 'text', max: 200, placeholder: 'Optional' },
+      { name: 'icon', label: 'Symbol', type: 'text', half: true, max: 4, placeholder: '✦', more: true },
+      { name: 'target', label: 'Daily target', type: 'number', min: 1, step: 1, half: true, more: true },
+      { name: 'unit', label: 'Unit', type: 'select', options: OPTIONS.habitUnit, half: true, more: true }
     ]
   },
   subject: {
@@ -86,14 +96,15 @@ export const schemas = {
   },
   workout: {
     list: 'workoutLogs', label: 'workout entry', icon: 'dumbbell', title: r => r.exercise,
+    form: { layout: 'compact', create: 'Log exercise', edit: 'Edit exercise', submit: 'Save set' },
     defaults: () => ({ date: todayStr(), sets: 3, reps: 10, weight: 0, duration: 0 }),
     fields: [
-      { name: 'exercise', label: 'Exercise', type: 'text', required: true, placeholder: 'e.g. Bench press', max: 80, suggest: 'exercises' },
-      { name: 'date', label: 'Date', type: 'date', required: true, half: true },
-      { name: 'sets', label: 'Sets', type: 'number', min: 1, step: 1, required: true, half: true },
-      { name: 'reps', label: 'Reps per set', type: 'number', min: 1, step: 1, required: true, half: true },
-      { name: 'weight', label: 'Weight (kg)', type: 'number', min: 0, step: 'any', half: true },
-      { name: 'duration', label: 'Minutes', type: 'number', min: 0, step: 1, half: true },
+      { name: 'exercise', label: 'Exercise', type: 'text', required: true, placeholder: 'e.g. Bench press', max: 80, suggest: 'exercises', cls: 't-big' },
+      { name: 'sets', label: 'Sets', type: 'stepper', min: 1, max: 99, step: 1, required: true, half: true },
+      { name: 'reps', label: 'Reps per set', type: 'stepper', min: 1, max: 999, step: 1, required: true, half: true },
+      { name: 'weight', label: 'Weight (kg)', type: 'stepper', min: 0, max: 999, step: 2.5, half: true },
+      { name: 'duration', label: 'Minutes', type: 'stepper', min: 0, max: 600, step: 5, half: true },
+      { name: 'date', label: 'Date', type: 'date', required: true, quick: 'past' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 600, placeholder: 'Optional' }
     ]
   },
@@ -121,14 +132,15 @@ export const schemas = {
   },
   transaction: {
     list: 'transactions', label: 'transaction', icon: 'receipt', title: r => r.note || r.category,
+    form: { layout: 'amount', create: 'New transaction', edit: 'Edit transaction', submit: 'Add transaction' },
     defaults: () => ({ type: 'expense', date: todayStr(), category: 'Food', recurrence: 'None' }),
     fields: [
-      { name: 'type', label: 'Type', type: 'segmented', options: TX_TYPE_OPTIONS },
-      { name: 'amount', label: 'Amount', type: 'number', min: 0, step: 'any', required: true, big: true, placeholder: '0', prefix: 'currency' },
-      { name: 'category', label: 'Category', type: 'select', options: OPTIONS.txCategory, half: true },
-      { name: 'date', label: 'Date', type: 'date', required: true, half: true },
+      { name: 'type', label: 'Type', type: 'txtype', options: TX_TYPE_OPTIONS },
+      { name: 'amount', label: 'Amount', type: 'amount', min: 0, required: true, placeholder: '0' },
+      { name: 'category', label: 'Category', type: 'categories' },
+      { name: 'date', label: 'Date', type: 'date', required: true, quick: 'finance' },
       { name: 'note', label: 'Description', type: 'text', max: 150, placeholder: 'Optional' },
-      { name: 'recurrence', label: 'Repeats', type: 'select', options: OPTIONS.recurrence, hint: 'Labelled only. Future entries are not posted automatically.' }
+      { name: 'recurrence', label: 'Repeats', type: 'select', options: OPTIONS.recurrence, hint: 'Labelled only. Future entries are not posted automatically.', more: true }
     ]
   },
   budget: {
@@ -153,41 +165,44 @@ export const schemas = {
   },
   game: {
     list: 'games', label: 'game', icon: 'gamepad', title: r => r.title,
+    form: { layout: 'cover', size: 'wide', create: 'Add game', submit: 'Add game' },
     defaults: () => ({ status: 'Playing', platform: 'PC', hours: 0, progress: 0 }),
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Game title', max: 100 },
+      { name: 'cover', label: 'Poster', type: 'cover', ratio: 3 / 4, poster: true, hint: 'Optional. Choose an image from your device; a designed poster is used otherwise.' },
+      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Game title', max: 100, cls: 't-big' },
       { name: 'platform', label: 'Platform', type: 'select', options: OPTIONS.platform, half: true },
       { name: 'status', label: 'Status', type: 'select', options: OPTIONS.gameStatus, half: true },
       { name: 'hours', label: 'Hours played', type: 'number', min: 0, step: 'any', half: true },
       { name: 'estimatedHours', label: 'Estimated total hours', type: 'number', min: 0, step: 'any', half: true, placeholder: 'Optional' },
       { name: 'rating', label: 'Rating (1–10)', type: 'number', min: 1, max: 10, step: 1 },
       { name: 'progress', label: 'Progress (manual)', type: 'range', min: 0, max: 100, step: 5, suffix: '%', hint: 'Add estimated total hours and progress is calculated from your playtime instead.', when: v => v.status !== 'Completed' && !(Number(v.estimatedHours) > 0) },
-      { name: 'cover', label: 'Cover art', type: 'cover', ratio: 3 / 4, hint: 'Optional. Choose an image from your device; a designed cover is used otherwise.' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 2, max: 1500, placeholder: 'Optional' }
     ]
   },
   book: {
     list: 'books', label: 'book', icon: 'book', title: r => r.title,
+    form: { layout: 'cover', size: 'wide', create: 'Add book', submit: 'Add book' },
     defaults: () => ({ status: 'Reading', totalPages: 0, currentPage: 0, rating: 0 }),
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Book title', max: 150 },
+      { name: 'cover', label: 'Cover', type: 'cover', ratio: 2 / 3, hint: 'Optional. Stored sharp at up to 600 × 900.' },
+      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Book title', max: 150, cls: 't-big' },
       { name: 'author', label: 'Author', type: 'text', max: 100, placeholder: 'Optional' },
       { name: 'status', label: 'Status', type: 'select', options: OPTIONS.bookStatus, half: true },
       { name: 'rating', label: 'Rating (1–5)', type: 'number', min: 0, max: 5, step: 1, half: true },
       { name: 'currentPage', label: 'Current page', type: 'number', min: 0, step: 1, half: true },
       { name: 'totalPages', label: 'Total pages', type: 'number', min: 0, step: 1, half: true },
-      { name: 'cover', label: 'Cover', type: 'cover', ratio: 2 / 3, hint: 'Optional. Stored sharp at up to 600 × 900.' },
       { name: 'notes', label: 'Notes', type: 'textarea', rows: 3, max: 3000, placeholder: 'Takeaways, quotes you wrote yourself…' }
     ]
   },
   note: {
     list: 'notes', label: 'entry', icon: 'notebook', title: r => r.title,
+    form: { layout: 'writing', size: 'full', create: 'New note', edit: 'Edit note', submit: 'Save note' },
     defaults: () => ({ kind: 'Note', date: todayStr() }),
     fields: [
-      { name: 'kind', label: 'Type', type: 'segmented', options: OPTIONS.noteKind },
-      { name: 'title', label: 'Title', type: 'text', placeholder: 'Optional if you add text', max: 150 },
-      { name: 'body', label: 'Write', type: 'textarea', rows: 7, max: 8000, placeholder: 'Your thoughts…' },
-      { name: 'date', label: 'Date', type: 'date', half: true, required: true },
+      { name: 'kind', label: 'Type', type: 'segmented', options: OPTIONS.noteKind, cls: 'w-kind' },
+      { name: 'title', label: 'Title', type: 'text', placeholder: 'Title', max: 150, cls: 'w-title', hideLabel: true },
+      { name: 'body', label: 'Write', type: 'textarea', rows: 12, max: 8000, placeholder: 'Start writing…', cls: 'w-body', hideLabel: true },
+      { name: 'date', label: 'Date', type: 'date', required: true, half: true },
       { name: 'tags', label: 'Tags', type: 'text', half: true, placeholder: 'comma, separated', max: 120 }
     ]
   },
@@ -202,13 +217,13 @@ export const schemas = {
       { name: 'progress', label: 'Progress', type: 'range', min: 0, max: 100, step: 5, suffix: '%', hint: 'With milestones, progress follows the checked milestones.' },
       { name: 'milestones', label: 'Milestones', type: 'textarea', rows: 3, placeholder: 'One per line', hint: 'Optional. Up to 20.' }
     ]
-  }
-  ,
+  },
   event: {
     list: 'events', label: 'event', icon: 'calendar', title: r => r.title,
+    form: { layout: 'compact', create: 'New event', submit: 'Add event' },
     defaults: () => ({ date: todayStr() }),
     fields: [
-      { name: 'title', label: 'Event', type: 'text', required: true, placeholder: 'What is happening?', max: 120 },
+      { name: 'title', label: 'Event', type: 'text', required: true, placeholder: 'What is happening?', max: 120, cls: 't-big' },
       { name: 'date', label: 'Date', type: 'date', required: true, quick: true },
       { name: 'startTime', label: 'Starts', type: 'time', required: true, half: true },
       { name: 'endTime', label: 'Ends (optional)', type: 'time', half: true, clearable: true },

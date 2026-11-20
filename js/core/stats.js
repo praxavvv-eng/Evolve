@@ -1,28 +1,100 @@
 /* Pure calculations over workspace state. No DOM, no writes.
  * Everything displayed as a number elsewhere in the app comes from here or from raw records. */
-import { addDays, todayStr, parseDate, monthKey, sum, num, clamp, groupBy, isDateStr } from './utils.js';
+import { addDays, todayStr, parseDate, dateStr, monthKey, sum, num, clamp, groupBy, isDateStr } from './utils.js';
 
-/* ---------------- habits ---------------- */
+/* ---------------- habits ----------------
+ * Every habit keeps its own history in habitLogs[date][habitId] (a boolean map, so one habit can never have two
+ * records for the same day). Dates are local YYYY-MM-DD strings everywhere, so time zones and daylight saving never shift a day.
+ *
+ * Schedules:  Daily / Weekdays / Weekends / Custom (habit.days = weekday numbers 0-6)  -> "fixed" habits, counted in days.
+ *             "3 days / week" (habit.perWeek = N)                                       -> "weekly" habits, counted in weeks.
+ * Rules:      - future days are never missed          - unscheduled days never break a streak
+ *             - a rest day (habit.skips[date]) is not a failure and never breaks a streak
+ *             - today is never a miss until the day has passed
+ */
+export const WEEKLY = '3 days / week';
+export const habitMode = h => (h.schedule === WEEKLY ? 'weekly' : 'fixed');
+export const habitPerWeek = h => Math.min(6, Math.max(1, Math.round(num(h.perWeek)) || 3));
+export const habitUnit = h => (habitMode(h) === 'weekly' ? 'week' : 'day');
+export const isRest = (habit, date) => Boolean(habit.skips?.[date]);
 export function isScheduled(habit, date) {
   const dow = (parseDate(date) || new Date()).getDay();       // 0 Sun … 6 Sat
   if (habit.schedule === 'Weekdays') return dow >= 1 && dow <= 5;
   if (habit.schedule === 'Weekends') return dow === 0 || dow === 6;
-  return true;
+  if (habit.schedule === 'Custom' && Array.isArray(habit.days) && habit.days.length) return habit.days.includes(dow);
+  return true;                                                 // Daily, flexible weekly (any day can count) and legacy Custom
 }
 export const habitDone = (state, id, date) => Boolean(state.habitLogs?.[date]?.[id]);
 
-/** Consecutive scheduled days completed. Unscheduled days are skipped; today does not break a streak until it ends. */
-export function habitStreak(state, habit) {
-  let count = 0, cursor = todayStr();
-  for (let i = 0; i < 400; i++) {
-    if (!isScheduled(habit, cursor)) { cursor = addDays(cursor, -1); continue; }
-    if (habitDone(state, habit.id, cursor)) count++;
-    else if (cursor !== todayStr()) break;
-    cursor = addDays(cursor, -1);
-  }
-  return count;
+const mondayOf = (d, monday = true) => { const x = parseDate(d); x.setDate(x.getDate() - (monday ? (x.getDay() + 6) % 7 : x.getDay())); return dateStr(x); };
+const startsMonday = state => state?.settings?.weekStartsMonday !== false;
+
+export function habitStartDate(state, h) {
+  const first = Object.keys(state.habitLogs).filter(d => state.habitLogs[d]?.[h.id]).sort()[0];
+  const created = h.createdAt ? String(h.createdAt).slice(0, 10) : '';
+  const candidates = [first, created].filter(isDateStr).sort();
+  return candidates[0] || todayStr();
 }
-export const habitsDueOn = (state, date) => state.habits.filter(h => isScheduled(h, date));
+
+/** Weekly habits: one entry per week from the first tracked week to the current one. */
+function weekRuns(state, h, start, today) {
+  const mon = startsMonday(state), out = [];
+  for (let w = mondayOf(start, mon), i = 0; w <= today && i < 600; w = addDays(w, 7), i++) {
+    const end = addDays(w, 6), from = w < start ? start : w;
+    let done = 0;
+    for (let d = from; d <= end && d <= today; d = addDays(d, 1)) if (habitDone(state, h.id, d)) done++;
+    const daysLeft = Math.round((parseDate(end) - parseDate(from)) / 86400000) + 1;     // first week may be partial
+    const required = Math.min(habitPerWeek(h), daysLeft);
+    out.push({ week: w, done, required, met: done >= required, current: end >= today });
+  }
+  return out;
+}
+
+/** { value, unit }: consecutive days (fixed) or weeks (weekly) that were kept. */
+export function habitStreakInfo(state, h) {
+  const today = todayStr(), start = habitStartDate(state, h), unit = habitUnit(h);
+  let count = 0;
+  if (unit === 'week') {
+    const runs = weekRuns(state, h, start, today);
+    for (let i = runs.length - 1; i >= 0; i--) {
+      if (runs[i].met) count++;
+      else if (runs[i].current) continue;               // this week is still open
+      else break;
+    }
+    return { value: count, unit };
+  }
+  for (let d = today, i = 0; d >= start && i < 4000; d = addDays(d, -1), i++) {
+    if (habitDone(state, h.id, d)) count++;
+    else if (!isScheduled(h, d) || isRest(h, d) || d === today) continue;
+    else break;
+  }
+  return { value: count, unit };
+}
+export const habitStreak = (state, habit) => habitStreakInfo(state, habit).value;
+/** Streak expressed in days, for achievements (a weekly streak counts seven days per week). */
+export const habitStreakDays = (state, habit) => { const s = habitStreakInfo(state, habit); return s.unit === 'week' ? s.value * 7 : s.value; };
+
+/** State of one calendar day for one habit: done | rest | missed | off | pre | future | open */
+export function habitDayState(state, h, d, start) {
+  const today = todayStr();
+  if (d > today) return 'future';
+  if (habitDone(state, h.id, d)) return 'done';
+  if (d < start) return 'pre';
+  if (isRest(h, d)) return 'rest';
+  if (habitMode(h) === 'weekly') return d === today ? 'open' : 'off';      // a weekly habit cannot miss a single day
+  if (!isScheduled(h, d)) return 'off';
+  return d === today ? 'open' : 'missed';
+}
+
+export const habitsDueOn = (state, date) => state.habits.filter(h => isScheduled(h, date) && !isRest(h, date));
+
+/** Share of today's habits done on a day, used by the combined heatmap (0..1, or null when nothing was due). */
+export function dayHabitScore(state, date, habits = state.habits) {
+  const due = habits.filter(h => isScheduled(h, date) && !isRest(h, date) && (habitStartDate(state, h) <= date));
+  const done = habits.filter(h => habitDone(state, h.id, date)).length;
+  const total = Math.max(due.length, done);
+  return total ? done / total : null;
+}
 
 /* ---------------- tasks ---------------- */
 export const completedOn = (t, date) => t.done && String(t.completedAt || '').slice(0, 10) === date;
@@ -147,25 +219,38 @@ export function gameProgress(g) {
 export const byTime = (a, b) => String(a.dueTime || '').localeCompare(String(b.dueTime || ''));
 
 /* ---------------- habit statistics (all from recorded check-ins) ---------------- */
-export function habitStartDate(state, h) {
-  const first = Object.keys(state.habitLogs).filter(d => state.habitLogs[d]?.[h.id]).sort()[0];
-  const created = h.createdAt ? String(h.createdAt).slice(0, 10) : '';
-  const candidates = [first, created].filter(isDateStr).sort();
-  return candidates[0] || todayStr();
-}
 export function habitStats(state, h) {
-  const today = todayStr(), start = habitStartDate(state, h);
-  let longest = 0, run = 0, totalDone = 0, scheduled = 0;
+  const today = todayStr(), start = habitStartDate(state, h), unit = habitUnit(h);
+  let longest = 0, totalDone = 0, scheduled = 0, restDays = 0;
   for (let d = start, i = 0; d <= today && i < 4000; d = addDays(d, 1), i++) {
-    if (!isScheduled(h, d)) continue;
-    const done = habitDone(state, h.id, d);
-    scheduled++;
-    if (done) { totalDone++; run++; longest = Math.max(longest, run); } else if (d < today) run = 0;
+    if (habitDone(state, h.id, d)) totalDone++;
+    if (isRest(h, d) && !habitDone(state, h.id, d)) restDays++;
   }
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(today, -i)).filter(d => d >= start && isScheduled(h, d));
-  const weekDone = weekDays.filter(d => habitDone(state, h.id, d)).length;
+  if (unit === 'week') {
+    const runs = weekRuns(state, h, start, today);
+    let run = 0;
+    runs.forEach(r => { if (r.met) { run++; longest = Math.max(longest, run); } else if (!r.current) run = 0; });
+    scheduled = runs.reduce((a, r) => a + r.required, 0);
+  } else {
+    let run = 0;
+    for (let d = start, i = 0; d <= today && i < 4000; d = addDays(d, 1), i++) {
+      if (habitDone(state, h.id, d)) { run++; longest = Math.max(longest, run); if (isScheduled(h, d)) scheduled++; continue; }
+      if (!isScheduled(h, d) || isRest(h, d)) continue;
+      scheduled++;
+      if (d < today) run = 0;
+    }
+  }
+  const cur = habitStreakInfo(state, h);
+  let weekDone, weekScheduled;
+  if (unit === 'week') {
+    const w = weekRuns(state, h, start, today).find(r => r.current);
+    weekDone = w ? w.done : 0; weekScheduled = w ? w.required : habitPerWeek(h);
+  } else {
+    const days = Array.from({ length: 7 }, (_, i) => addDays(today, -i)).filter(d => d >= start && isScheduled(h, d) && !isRest(h, d));
+    weekDone = days.filter(d => habitDone(state, h.id, d)).length; weekScheduled = days.length;
+  }
   const recent = Object.keys(state.habitLogs).filter(d => state.habitLogs[d]?.[h.id]).sort().reverse().slice(0, 5);
-  return { current: habitStreak(state, h), longest, totalDone, scheduled, pct: scheduled ? (totalDone / scheduled) * 100 : 0, weekDone, weekScheduled: weekDays.length, weekPct: weekDays.length ? (weekDone / weekDays.length) * 100 : 0, recent, start };
+  return { current: cur.value, longest, unit, totalDone, scheduled, pct: scheduled ? Math.min(100, (totalDone / scheduled) * 100) : 0, weekDone, weekScheduled, weekPct: weekScheduled ? Math.min(100, (weekDone / weekScheduled) * 100) : 0, recent, start, restDays };
 }
 
 /* ---------------- challenges ---------------- */

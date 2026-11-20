@@ -9,7 +9,7 @@ import { pageHead } from '../components/ui.js';
 
 const ui = { range: 30 };
 const RANGES = [[7, '7 days'], [30, '30 days'], [90, '90 days']];
-const C = { tasks: 'var(--accent)', habits: '#94b8d0', workouts: '#d39a6e' };
+const C = { tasks: 'var(--accent)', habits: 'var(--pos)', workouts: 'var(--warn)' };
 const weekStart = d => { const dt = parseDate(d); dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7)); return dateStr(dt); };
 const need = text => `<p class="t-body mt-3 need">${esc(text)}</p>`;
 const card = (title, sub, inner, i) => `<section class="card card-pad" style="--i:${i}"><div class="between"><div><h2 class="t-h2">${esc(title)}</h2>${sub ? `<p class="t-small">${esc(sub)}</p>` : ''}</div></div>${inner}</section>`;

@@ -1,10 +1,10 @@
-/* Evolve V7 bootstrap.
+/* Evolve bootstrap.
  * Order: delegation -> load state (never overwrite unreadable data) -> appearance -> chrome -> routes -> router. */
 import * as State from './core/state.js';
 import { initDelegation, registerActions, on } from './core/events.js';
 import { initAppearance } from './core/appearance.js';
 import { checkProgress } from './core/xp.js';
-import { icon } from './core/icons.js';
+import { icon, logo } from './core/icons.js';
 import { esc, $, downloadFile, todayStr } from './core/utils.js';
 import { HUBS, MORE, navById, hubOf } from './nav.js';
 import * as Router from './router.js';
@@ -43,23 +43,23 @@ function buildSidebar() {
   const hub = h => `<div class="sb-hub" data-hub="${h.id}"><a class="sb-item" href="#/${h.route}" data-hubnav="${h.id}" title="${esc(h.label)}"><span class="i-wrap">${icon(h.icon, { size: 20 })}</span><span>${esc(h.label)}</span></a>
     ${h.items.filter(x => x !== 'library').length > 1 ? `<div class="sb-children">${h.items.filter(x => x !== 'library').map(x => navById(x)).map(n => link(n, 'sb-sub')).join('')}</div>` : ''}</div>`;
   sb.innerHTML = `
-    <div class="sb-brand"><img src="assets/logo/mark.svg" alt="" width="34" height="34"><span class="spacer"></span>
+    <div class="sb-brand"><span class="sb-logo">${logo(30)}</span><b class="sb-word">Evolve</b><span class="spacer"></span>
       <button class="icon-btn" type="button" data-action="sidebar-toggle" aria-label="Collapse sidebar" id="sbToggle">${icon('chevron-left', { size: 18 })}</button></div>
     <div class="sb-scroll">${HUBS.map(hub).join('')}</div>
     <div class="sb-foot">${MORE.map(id => link(navById(id))).join('')}</div>`;
 }
 
 function buildTabbar() {
-  const tab = h => `<a class="tab" href="#/${h.route}" data-tab="${h.id}"><span>${icon(h.icon, { size: 22 })}</span><span>${esc(h.label)}</span></a>`;
-  $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd"></span>${HUBS.map(tab).join('')}`;
+  const tab = h => `<a class="tab" href="#/${h.route}" data-tab="${h.id}"><span class="tab-ico">${icon(h.icon, { size: 24 })}</span><span class="tab-lab">${esc(h.label)}</span></a>`;
+  $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd" aria-hidden="true"></span>${HUBS.map(tab).join('')}`;
 }
 
 function moveIndicator() {
-  const bar = $('#tabbar'), ind = $('#tabInd'), active = bar.querySelector('.tab[aria-current="page"]');
+  const bar = $('#tabbar'), ind = $('#tabInd'), active = bar?.querySelector('.tab[aria-current="page"]');
+  if (!ind) return;
   if (!active || !bar.offsetWidth) { ind.style.setProperty('--o', 0); return; }
-  const inset = 4;
-  ind.style.setProperty('--w', `${active.offsetWidth - inset * 2}px`);
-  ind.style.setProperty('--x', `${active.offsetLeft + inset}px`);
+  ind.style.setProperty('--w', `${active.offsetWidth}px`);
+  ind.style.setProperty('--x', `${active.offsetLeft}px`);
   ind.style.setProperty('--o', 1);
 }
 
@@ -82,6 +82,7 @@ function updateChrome({ id, parts, route }) {
   const detail = parts.length > 0;
   const back = $('#backBtn'); back.hidden = !detail; $('#topMark').hidden = detail;
   back.dataset.to = `#/${id}`;
+  $('#topbar').classList.toggle('is-detail', detail);
   onScroll();
 }
 
@@ -133,7 +134,18 @@ function renderRecovery() {
 registerActions({
   back(el) { location.hash = el.dataset.to || '#/home'; },
   search() { openSearch(); },
-  more(el) { openMenu(el, [...MORE.map(id => ({ label: navById(id).label, icon: navById(id).icon, onClick: () => { location.hash = `#/${id}`; } })), 'sep', { label: 'Cloud sync', icon: 'cloud', onClick: () => { location.hash = '#/cloud'; } }]); },
+  more(el) {
+    const go = h => () => { location.hash = h; };
+    openMenu(el, [
+      { label: 'Insights', icon: 'chart', onClick: go('#/insights') },
+      { label: 'Search', icon: 'search', onClick: () => openSearch() },
+      'sep',
+      { label: 'Appearance', icon: 'palette', onClick: go('#/settings/appearance') },
+      { label: 'Navigation style', icon: 'dock', onClick: go('#/settings/navigation') },
+      { label: 'Cloud sync', icon: 'cloud', onClick: go('#/cloud') },
+      { label: 'Settings', icon: 'sliders', onClick: go('#/settings') }
+    ]);
+  },
   'quick-add'() { openQuickAdd(); },
   'sidebar-toggle'() {
     const app = $('#app'), collapsed = app.dataset.sidebar !== 'collapsed';
@@ -150,22 +162,23 @@ function boot() {
   initDelegation();
   const res = State.init();
   initAppearance();
-  if (res.status === 'corrupt') { renderRecovery(); return; }
+  if (res.status === 'corrupt') { renderRecovery(); document.getElementById('splash')?.remove(); return; }
 
   buildSidebar(); buildTabbar();
-  $('#searchIcon').innerHTML = icon('search', { size: 20 });
+  $('#searchIcon').innerHTML = icon('search', { size: 19 });
   $('#searchPillIcon').innerHTML = icon('search', { size: 18 });
   $('#backBtn').innerHTML = icon('chevron-left', { size: 22 });
   $('#addPill').innerHTML = `${icon('plus', { size: 16 })} Add`;
   $('#moreBtn').innerHTML = icon('more', { size: 20 });
-  $('#addIcon').innerHTML = icon('plus', { size: 22 });
+  $('#addIcon').innerHTML = icon('plus', { size: 20 });
+  $('#topMark').innerHTML = `${logo(26)}<b>Evolve</b>`;
   if (State.get().ui.sidebarCollapsed) { $('#app').dataset.sidebar = 'collapsed'; $('#sbToggle').innerHTML = icon('chevron-right', { size: 18 }); }
 
   [home, plan, habits, academics, finance, fitness, gaming, learning, journal, goals, calendar, discipline, levels, insights, settings, library].forEach(Router.register);
   checkProgress({ quiet: true });
 
   const ui = State.get().ui;
-  if (res.status === 'migrated' && !ui.migrationNoticeSeen) banner(`Your V${res.from} data was copied into V7. The original V6 data is untouched, so you can still open V6.`, { kind: 'is-info', dismiss: 'migrationNoticeSeen' });
+  if (res.status === 'migrated' && !ui.migrationNoticeSeen) banner(`Your V${res.from} data was copied into this version. The original V6 data is untouched, so you can still open V6.`, { kind: 'is-info', dismiss: 'migrationNoticeSeen' });
   else if (res.status === 'fresh' && !ui.freshNoticeSeen) banner('Moving over from V6 on a different address? Export a backup from V6 and import it in Settings → Data.', { kind: 'is-info', dismiss: 'freshNoticeSeen' });
   if (res.status === 'unavailable') banner('Browser storage is unavailable here, so changes will be lost when you close this tab.');
 
@@ -176,11 +189,14 @@ function boot() {
   Router.start($('#view'), { onRoute: updateChrome });
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', moveIndicator);
+  document.addEventListener('evolve:settings', () => requestAnimationFrame(moveIndicator));
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
   });
 
+  requestAnimationFrame(() => requestAnimationFrame(() => { const sp = document.getElementById('splash'); if (sp) { sp.classList.add('is-out'); setTimeout(() => sp.remove(), 500); } }));
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('service-worker.js').catch(() => { /* offline support is optional */ });
 }
 
-boot();
+try { boot(); } catch (e) { console.error('[boot] failed', e); document.getElementById('splash')?.remove(); throw e; }
+setTimeout(() => document.getElementById('splash')?.remove(), 6000);   // safety net: never leave the splash covering the app

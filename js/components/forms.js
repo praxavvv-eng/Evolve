@@ -2,7 +2,7 @@
  * the fields it needs. Handles validation messages, conditional fields, double-submit protection,
  * delete-with-undo and image selection for game covers. */
 import * as State from '../core/state.js';
-import { schemas } from '../core/schemas.js';
+import { schemas, CAT_ICONS, OPTIONS, WEEKDAYS } from '../core/schemas.js';
 import { saveRecord, removeRecord, restoreTrash } from '../core/records.js';
 import { openSheet, confirmDialog } from './modal.js';
 import { selectHTML } from './dropdown.js';
@@ -29,12 +29,23 @@ function nextFreeNo(subject, type) {
   return '';
 }
 
+const GROUPED = ['segmented', 'cover', 'colors', 'pills', 'weekdays', 'categories', 'txtype'];
+function catList(type, current) {
+  const list = [...(type === 'income' ? OPTIONS.incomeCategory : OPTIONS.expenseCategory)];
+  if (current && !list.includes(current)) list.push(current);          // never hide the category of an existing record
+  return list;
+}
+function catGrid(name, list, value, fid) {
+  return list.map(c => `<label class="cat-opt"><input type="radio" name="${name}" value="${esc(c)}" ${c === value ? 'checked' : ''}><span>${icon(CAT_ICONS[c] || 'tag', { size: 22 })}${esc(c)}</span></label>`).join('');
+}
+const quickSets = { true: [['Today', 0], ['Tomorrow', 1], ['+1 week', 7]], past: [['Today', 0], ['Yesterday', -1]], finance: [['Today', 0], ['Yesterday', -1]] };
+
 function fieldHTML(f, values, fid, errors) {
   const id = `${fid}-${f.name}`, v = values[f.name] ?? '';
   const err = errors[f.name];
-  const cls = `field ${f.half ? 'is-half' : ''} ${f.big ? 'field-big' : ''} ${err ? 'has-error' : ''}`;
-  const labelText = f.type === 'segmented' || f.type === 'cover' || f.type === 'colors' ? `<span class="field-label">${esc(f.label)}</span>` : `<label for="${id}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
-  const label = f.clearable ? `<div class="label-row">${labelText}<button type="button" class="mini-link" data-clear="${f.name}" ${v ? '' : 'hidden'}>Clear</button></div>` : labelText;
+  const cls = `field ${f.half ? 'is-half' : ''} ${f.big ? 'field-big' : ''} ${f.cls || ''} ${err ? 'has-error' : ''}`;
+  const labelText = GROUPED.includes(f.type) ? `<span class="field-label ${f.hideLabel ? 'sr-only' : ''}">${esc(f.label)}</span>` : `<label for="${id}" class="${f.hideLabel ? 'sr-only' : ''}">${esc(f.label)}${f.required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>`;
+  const label = f.type === 'amount' || f.type === 'txtype' ? '' : f.clearable ? `<div class="label-row">${labelText}<button type="button" class="mini-link" data-clear="${f.name}" ${v ? '' : 'hidden'}>Clear</button></div>` : labelText;
   let ctl = '';
   switch (f.type) {
     case 'select': {
@@ -58,9 +69,29 @@ function fieldHTML(f, values, fid, errors) {
     case 'textarea':
       ctl = `<textarea id="${id}" name="${f.name}" rows="${f.rows || 3}" maxlength="${f.max || 4000}" placeholder="${esc(f.placeholder || '')}">${esc(v)}</textarea>`;
       break;
+    case 'pills':
+      ctl = `<div class="pill-seg" role="radiogroup" aria-label="${esc(f.label)}">${f.options.map(o => `<label style="--pc:${o.color || 'var(--accent)'}"><input type="radio" name="${f.name}" value="${esc(o.value)}" ${String(v) === String(o.value) ? 'checked' : ''}><span>${esc(o.label)}</span></label>`).join('')}</div>`;
+      break;
+    case 'weekdays': {
+      const sel = (Array.isArray(v) && v.length ? v : [1, 2, 3, 4, 5, 6, 0]).map(Number);
+      ctl = `<div class="weekdays" role="group" aria-label="${esc(f.label)}">${WEEKDAYS.map(d => `<label class="wd-opt" title="${d.n}"><input type="checkbox" data-multi name="${f.name}" value="${d.v}" ${sel.includes(d.v) ? 'checked' : ''} aria-label="${d.n}"><span aria-hidden="true">${d.l}</span></label>`).join('')}</div>`;
+      break;
+    }
+    case 'stepper':
+      ctl = `<div class="stepper"><button type="button" data-step="-1" aria-label="Decrease ${esc(f.label)}">${icon('minus', { size: 18 })}</button><input id="${id}" name="${f.name}" type="number" inputmode="decimal" value="${esc(v)}" min="${f.min ?? ''}" max="${f.max ?? ''}" step="${f.step || 1}" data-step-size="${f.step || 1}" autocomplete="off"><button type="button" data-step="1" aria-label="Increase ${esc(f.label)}">${icon('plus', { size: 18 })}</button></div>`;
+      break;
+    case 'txtype':
+      ctl = `<div class="type-seg" role="radiogroup" aria-label="Transaction type">${f.options.map(o => `<label><input type="radio" name="${f.name}" value="${esc(o.value)}" ${String(v) === String(o.value) ? 'checked' : ''}>${icon(o.value === 'income' ? 'arrow-down-left' : 'arrow-up-right', { size: 18 })}${esc(o.label)}</label>`).join('')}</div>`;
+      break;
+    case 'amount':
+      ctl = `<div class="amount-hero"><label class="ah-label" for="${id}">${esc(f.label)}</label><div class="amount-line ${values.type === 'income' ? 'is-income' : ''}"><span class="sym" aria-hidden="true">${esc(currencySymbol())}</span><input id="${id}" name="${f.name}" type="number" inputmode="decimal" min="0" step="any" value="${esc(v)}" placeholder="0" autocomplete="off" ${err ? 'aria-invalid="true"' : ''} data-amount></div></div>`;
+      break;
+    case 'categories':
+      ctl = `<div class="cat-grid" role="radiogroup" aria-label="${esc(f.label)}" data-cats>${catGrid(f.name, catList(values.type, v), v, fid)}</div>`;
+      break;
     case 'cover':
-      ctl = `<div class="cover-pick"><div class="thumb" data-cover-thumb style="${v ? `background-image:url('${esc(v)}')` : ''}">${v ? '' : icon('image', { size: 20 })}</div>
-        <div class="stack" style="gap:8px"><label class="btn btn-sm" for="${id}-file">${icon('upload', { size: 16 })} Choose image</label><input class="sr-only" type="file" id="${id}-file" accept="image/*" data-cover-file><button type="button" class="btn btn-sm btn-ghost" data-cover-clear ${v ? '' : 'hidden'}>Remove</button></div>
+      ctl = `<div class="cover-pick"><div class="thumb ${f.poster ? 'is-poster' : ''}" data-cover-thumb style="${v ? `background-image:url('${esc(v)}')` : ''}">${v ? '' : icon('image', { size: 20 })}</div>
+        <div class="cover-actions"><label class="btn btn-sm" for="${id}-file">${icon('upload', { size: 16 })} Choose image</label><input class="sr-only" type="file" id="${id}-file" accept="image/*" data-cover-file><button type="button" class="btn btn-sm btn-ghost" data-cover-clear ${v ? '' : 'hidden'}>Remove</button></div>
         <input type="hidden" name="${f.name}" value="${esc(v)}"></div>`;
       break;
     default: {
@@ -69,7 +100,7 @@ function fieldHTML(f, values, fid, errors) {
       const input = `<input id="${id}" name="${f.name}" type="${type}" value="${esc(v)}" placeholder="${esc(f.placeholder || '')}" ${attrs} autocomplete="off" ${err ? 'aria-invalid="true"' : ''}>`;
       ctl = f.prefix ? `<div class="amount-wrap"><span class="amount-sym" aria-hidden="true">${esc(currencySymbol())}</span>${input}</div>` : input;
       if (f.presets) ctl += `<div class="suggest quick-presets" aria-label="Presets">${f.presets.map(n => `<button type="button" data-preset="${n}">${n}</button>`).join('')}</div>`;
-      if (f.quick) ctl += `<div class="suggest quick-dates" aria-label="Quick dates">${[['Today', 0], ['Tomorrow', 1], ['+1 week', 7]].map(([l, n]) => `<button type="button" data-quick="${n}">${l}</button>`).join('')}</div>`;
+      if (f.quick) ctl += `<div class="suggest quick-dates" aria-label="Quick dates">${(quickSets[f.quick] || quickSets.true).map(([l, n]) => `<button type="button" data-quick="${n}" class="${v && v === addDays(todayStr(), n) ? 'is-on' : ''}">${l}</button>`).join('')}</div>`;
       if (f.suggest === 'exercises') {
         const names = exerciseSummaries(State.get()).slice(0, 6).map(s => s.name);
         if (names.length) ctl += `<div class="suggest" aria-label="Recent exercises">${names.map(n => `<button type="button" data-suggest="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
@@ -83,7 +114,10 @@ export function collect(form) {
   const out = {};
   [...form.elements].forEach(el => {
     if (!el.name || el.disabled) return;
-    if (el.type === 'radio') { if (el.checked) out[el.name] = el.value; } else if (el.type === 'checkbox') out[el.name] = el.checked; else out[el.name] = el.value;
+    if (el.type === 'radio') { if (el.checked) out[el.name] = el.value; }
+    else if (el.type === 'checkbox' && el.dataset.multi !== undefined) { (out[el.name] ||= []); if (el.checked) out[el.name].push(el.value); }
+    else if (el.type === 'checkbox') out[el.name] = el.checked;
+    else out[el.name] = el.value;
   });
   return out;
 }
@@ -149,19 +183,21 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
     const n = nextFreeNo(values.subject, values.type);
     if (values.type === 'Practical') values.practicalNo = n; else values.assignmentNo = n;
   }
-  const wide = ['note', 'book'].includes(type);
+  const cfg = schema.form || {}, layout = cfg.layout || '';
+  const more = schema.fields.filter(f => f.more), main = schema.fields.filter(f => !f.more);
+  const moreHTML = more.length ? `<details class="form-more" ${existing ? 'open' : ''}><summary>More options ${icon('chevron-down', { size: 18 })}</summary><div class="form-more-body form">${more.map(f => fieldHTML(f, values, fid, {})).join('')}</div></details>` : '';
   const api = openSheet({
-    title: title || `${existing ? 'Edit' : 'New'} ${schema.label}`,
-    size: wide ? 'wide' : '',
-    body: `<form class="form" id="${fid}" novalidate autocomplete="off">${schema.fields.map(f => fieldHTML(f, values, fid, {})).join('')}</form>`,
-    footer: `${existing ? `<button class="btn btn-ghost btn-danger" type="button" data-del aria-label="Delete ${esc(schema.label)}">${icon('trash', { size: 18 })}</button>` : `<button class="btn btn-ghost" type="button" data-sheet-close>Cancel</button>`}<button class="btn btn-primary" type="submit" form="${fid}">${existing ? 'Save changes' : 'Add'}</button>`,
+    title: title || (existing ? (cfg.edit || `Edit ${schema.label}`) : (cfg.create || `New ${schema.label}`)),
+    size: cfg.size || '',
+    body: `<form class="form ${layout ? `is-${layout}` : ''}" id="${fid}" novalidate autocomplete="off">${main.map(f => fieldHTML(f, values, fid, {})).join('')}${moreHTML}</form>`,
+    footer: `${existing ? `<button class="btn btn-ghost btn-danger" type="button" data-del aria-label="Delete ${esc(schema.label)}">${icon('trash', { size: 18 })}</button><button class="btn btn-ghost" type="button" data-sheet-close>Cancel</button>` : `<button class="btn btn-ghost" type="button" data-sheet-close>Cancel</button>`}<button class="btn btn-primary" type="submit" form="${fid}">${existing ? 'Save changes' : (cfg.submit || 'Add')}</button>`,
     onMount(root) { wire(root); }
   });
 
   function wire(root) {
     const form = root.querySelector('form');
     const blocks = [...form.querySelectorAll('[data-field]')];
-    const defs = schema.fields;
+    const defs = [...schema.fields.filter(f => !f.more), ...schema.fields.filter(f => f.more)];   // DOM order: main fields, then "More options"
 
     const syncVisibility = () => {
       const cur = collect(form);
@@ -173,7 +209,10 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
         if (show && wasHidden && cur[f.name] !== undefined) { const el = b.querySelector('input[type=text],textarea'); if (el) el.value = cur[f.name]; }   // carry typed text between same-named fields
       });
     };
+    const amt = form.querySelector('[data-amount]');
+    if (amt) { const fit = () => { amt.style.width = `${Math.min(9, Math.max(1.2, String(amt.value).length + 0.3))}ch`; }; amt.addEventListener('input', fit); fit(); }   // the figure and the currency symbol stay together
     syncVisibility();
+    if (layout === 'amount' && !existing) setTimeout(() => form.querySelector('[data-amount]')?.focus({ preventScroll: true }), 380);   // amount first: the keypad opens straight away
 
     const autoNumber = () => {
       if (type !== 'academic' || existing) return;
@@ -182,7 +221,11 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
     };
     let dirty = false;
     api.guard = () => !dirty;                                // taps outside the sheet never discard typed data
+    api.onBlocked = async () => {                            // X, Cancel, Escape and drag-down all end up here when there is unsaved input
+      if (await confirmDialog({ title: 'Discard changes?', message: 'What you typed has not been saved.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', danger: true })) { dirty = false; api.close(); }
+    };
     form.addEventListener('input', () => { dirty = true; }, { once: true });
+    form.addEventListener('change', () => { dirty = true; }, { once: true });
     form.addEventListener('focusin', e => { if (e.target.matches('input,textarea,.dd-trigger')) setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320); });   // keep the active field above the keyboard
     form.addEventListener('input', e => {
       if (e.target.name === 'assignmentNo' || e.target.name === 'practicalNo') e.target.dataset.touched = '1';
@@ -196,12 +239,26 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
       if (blk?.classList.contains('has-error')) { blk.classList.remove('has-error'); const er = blk.querySelector('.field-error'); er.hidden = true; }
     });
     form.addEventListener('change', e => {
-      if (['type', 'status', 'subject'].includes(e.target.name)) { syncVisibility(); if (e.target.name !== 'status') autoNumber(); }
+      if (['type', 'status', 'subject', 'schedule'].includes(e.target.name)) { syncVisibility(); if (e.target.name !== 'status') autoNumber(); }
+      if (type === 'transaction' && e.target.name === 'type') {                  // Expense and Income offer different categories
+        const grid = form.querySelector('[data-cats]'), cur = collect(form), list = catList(cur.type, '');
+        if (grid) grid.innerHTML = catGrid('category', list, list.includes(cur.category) ? cur.category : list[0], fid);
+        form.querySelector('.amount-line')?.classList.toggle('is-income', cur.type === 'income');
+        const sub = root.querySelector('button[type=submit]'); if (sub && !existing) sub.textContent = cur.type === 'income' ? 'Add income' : 'Add expense';
+      }
+      if (e.target.matches('input[type=date]')) syncQuick(e.target);
     });
+    const syncQuick = el => { const wrap = el.closest('[data-field]'); wrap?.querySelectorAll('[data-quick]').forEach(b => b.classList.toggle('is-on', el.value === addDays(todayStr(), Number(b.dataset.quick)))); };
     const syncClear = el => { const btn = el.closest('[data-field]')?.querySelector('[data-clear]'); if (btn) btn.hidden = !el.value; };
     form.addEventListener('click', e => {
+      const st = e.target.closest('[data-step]');
+      if (st) {
+        const inp = st.parentElement.querySelector('input'), step = Number(inp.dataset.stepSize) || 1, min = inp.min === '' ? -Infinity : Number(inp.min), max = inp.max === '' ? Infinity : Number(inp.max);
+        const next = Math.min(max, Math.max(min, Math.round(((Number(inp.value) || 0) + step * Number(st.dataset.step)) * 100) / 100));
+        inp.value = String(next); inp.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       const qd = e.target.closest('[data-quick]');
-      if (qd) { const inp = qd.closest('[data-field]').querySelector('input[type=date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (qd) { const inp = qd.closest('[data-field]').querySelector('input[type=date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); syncQuick(inp); }
       const ps = e.target.closest('[data-preset]');
       if (ps) { const inp = ps.closest('[data-field]').querySelector('input'); inp.value = ps.dataset.preset; inp.dispatchEvent(new Event('input', { bubbles: true })); }
       const cl = e.target.closest('[data-clear]');

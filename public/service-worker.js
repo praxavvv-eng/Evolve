@@ -1,7 +1,7 @@
 /* Evolve service worker: network-first for the app shell so edits show up immediately during development,
  * with a cache fallback so the app still opens offline. It never touches localStorage data. */
-const CACHE = 'evolve-v7-shell-1';
-const SHELL = ['./', './index.html', './manifest.json', './assets/logo/mark.svg', './assets/icons/icon-192.png', './assets/icons/icon-512.png'];
+const CACHE = 'evolve-v9-shell-1';
+const SHELL = ['./', './index.html', './manifest.json', './assets/logo/mark.svg', './assets/icons/icon-192.png', './assets/icons/icon-512.png', './assets/icons/apple-touch-180.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -6,13 +6,18 @@ import { uid, isDateStr, todayStr, dateStr, clone } from '../core/utils.js';
 export const SCHEMA_VERSION = 7;
 export const CHALLENGE_DAYS = [7, 14, 21, 30, 60, 90];
 export const ACCENTS = {
-  champagne: { name: 'Champagne', hex: '#D4BC8E' },
-  titanium: { name: 'Titanium', hex: '#C4C7CC' },
-  copper: { name: 'Copper', hex: '#D39A6E' },
-  sage: { name: 'Sage', hex: '#A5BDA3' },
-  ice: { name: 'Ice', hex: '#9DBBD0' },
-  rose: { name: 'Clay rose', hex: '#CDA39B' }
+  blue: { name: 'Blue', hex: '#0A84FF' },
+  green: { name: 'Green', hex: '#30B350' },
+  red: { name: 'Red', hex: '#FF453A' },
+  orange: { name: 'Orange', hex: '#FF9500' },
+  yellow: { name: 'Yellow', hex: '#FFCC00' },
+  violet: { name: 'Violet', hex: '#8B5CF6' },
+  cyan: { name: 'Cyan', hex: '#32ADE6' }
 };
+/** Accent ids saved by earlier versions keep working: they map to the closest current accent. */
+export const LEGACY_ACCENTS = { champagne: 'blue', titanium: 'blue', copper: 'orange', sage: 'green', ice: 'cyan', rose: 'red', emerald: 'green', amber: 'orange', indigo: 'blue', violet: 'violet', cyan: 'cyan', blue: 'blue' };
+export const APP_STYLES = ['minimal', 'glass', 'cinematic', 'classic'];
+export const NAV_STYLES = ['minimal', 'cinematic', 'glass', 'casual'];
 export const HABIT_COLORS = [
   { id: 'green', name: 'Green', hex: '#5cc28a' }, { id: 'blue', name: 'Blue', hex: '#5b9df0' }, { id: 'orange', name: 'Orange', hex: '#f0974a' },
   { id: 'teal', name: 'Teal', hex: '#3fc1b5' }, { id: 'gold', name: 'Gold', hex: '#e5c25b' }, { id: 'coral', name: 'Coral', hex: '#e36f6f' },
@@ -21,7 +26,7 @@ export const HABIT_COLORS = [
 export const XP_CATEGORIES = ['consistency', 'academics', 'fitness', 'finance', 'gaming', 'learning', 'personal'];
 
 export const freshSettings = () => ({
-  theme: 'dark', amoled: true, accent: 'champagne', customAccent: '', glass: 60,
+  theme: 'dark', amoled: true, accent: 'blue', customAccent: '', style: 'minimal', navStyle: 'minimal', glass: 60,
   density: 'comfortable', textSize: 'default', motion: 'system',
   currency: 'INR', weekStartsMonday: true, dailyXpCap: 100, levelRewards: {}
 });
@@ -79,9 +84,10 @@ export function normalizeState(input) {
   /* settings: map V6 palette ids, keep unknown-safe defaults */
   const s = { ...freshSettings(), ...(isObj(src.settings) ? src.settings : {}) };
   delete s.name; delete s.dashboardWidgets;
-  const legacyPalette = { titanium: 'titanium', champagne: 'champagne', sage: 'sage', ice: 'ice', blue: 'ice', emerald: 'sage', amber: 'champagne', violet: 'titanium', indigo: 'titanium', rose: 'rose', cyan: 'ice' };
   const inS = isObj(src.settings) ? src.settings : {};
-  s.accent = ACCENTS[inS.accent] ? inS.accent : (legacyPalette[inS.palette] || 'champagne');   // V6 stored a palette id; V7 stores an accent id
+  s.accent = ACCENTS[inS.accent] ? inS.accent : (LEGACY_ACCENTS[inS.accent] || LEGACY_ACCENTS[inS.palette] || 'blue');   // V6 stored a palette id; V7+ stores an accent id
+  s.style = APP_STYLES.includes(inS.style) ? inS.style : 'minimal';
+  s.navStyle = NAV_STYLES.includes(inS.navStyle) ? inS.navStyle : 'minimal';
   delete s.palette;
   if (!s.customAccent && src.settings?.accent && /^#[0-9a-f]{6}$/i.test(src.settings.accent)) s.customAccent = src.settings.accent;
   if (!/^#[0-9a-f]{6}$/i.test(s.customAccent || '')) s.customAccent = '';
@@ -162,7 +168,14 @@ export function normalizeState(input) {
   out.games = out.games.map(normGame);
   out.savingsGoals = out.savingsGoals.map(x => ({ ...x, name: String(x.name || 'Savings goal'), targetAmount: n0(x.targetAmount), savedAmount: n0(x.savedAmount) }));
   /* habit colours: legacy habits get a stable colour by position; nothing else about them changes */
-  out.habits.forEach((h, i) => { if (!/^#[0-9a-f]{6}$/i.test(h.color || '')) h.color = HABIT_COLORS[i % HABIT_COLORS.length].hex; if (!h.createdAt) delete h.createdAt; });
+  out.habits.forEach((h, i) => {
+    if (!/^#[0-9a-f]{6}$/i.test(h.color || '')) h.color = HABIT_COLORS[i % HABIT_COLORS.length].hex;
+    if (!h.createdAt) delete h.createdAt;
+    /* V9 additive fields: custom weekdays, weekly target, rest days. Older habits simply do not have them. */
+    if (h.days !== undefined) h.days = Array.isArray(h.days) ? [...new Set(h.days.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort() : [];
+    if (h.perWeek !== undefined) h.perWeek = Math.min(6, Math.max(1, Math.round(Number(h.perWeek)) || 3));
+    if (h.skips !== undefined) { const k = {}; if (isObj(h.skips)) Object.keys(h.skips).forEach(d => { if (isDateStr(d) && h.skips[d]) k[d] = true; }); h.skips = k; }
+  });
 
   /* calendar events */
   const T = /^([01]\d|2[0-3]):[0-5]\d$/;

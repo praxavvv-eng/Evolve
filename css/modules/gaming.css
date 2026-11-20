@@ -37,3 +37,26 @@
 .cover img { border: 0; outline: 0; image-rendering: auto; backface-visibility: hidden; transform: translateZ(0); -webkit-user-drag: none; user-select: none; }
 .gd-cover .cover { border: 0; background-clip: padding-box; }
 .progress-unset { padding: 14px; border-radius: 16px; border: 1.5px dashed var(--line-strong); }
+
+/* ---------- V9: cinematic gaming ---------- */
+.gaming-page .shelf-item.is-poster { width: 136px; }
+.game-hero { position: relative; border-radius: 26px; overflow: hidden; isolation: isolate; min-height: 232px; display: flex; align-items: flex-end; color: #fff; background: #000; box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.6); }
+.gh-art { position: absolute; inset: 0; z-index: -2; } .gh-art .cover { position: absolute; inset: 0; transform: scale(1.1); filter: saturate(1.15); }
+.gh-art .cover img { object-position: center 30%; }
+.gh-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.1) 100%); }
+.gh-link { position: absolute; inset: 0; z-index: 1; }
+.gh-body { position: relative; z-index: 2; padding: 18px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; width: 100%; pointer-events: none; }
+.gh-body .btn, .gh-body .row-gap { pointer-events: auto; }
+.gh-body h2 { font-size: clamp(1.6rem, 6vw, 2.2rem); font-weight: 750; letter-spacing: -0.04em; line-height: 1.05; }
+.gh-body p { font-size: 0.86rem; color: rgba(255, 255, 255, 0.78); }
+.gh-body .badge { background: rgba(255, 255, 255, 0.18); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.gh-prog { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 0.82rem; }
+.gh-prog .bar { flex: 1; background: rgba(255, 255, 255, 0.25); height: 5px; } .gh-prog .bar > span { background: #fff; }
+.gh-btn { background: rgba(255, 255, 255, 0.16); color: #fff; border-color: rgba(255, 255, 255, 0.2); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.gh-btn:hover { background: rgba(255, 255, 255, 0.26); }
+.game-card .game-top .badge-pos, .game-top .badge-accent, .game-top .badge-warn, .game-top .badge-neg { color: #fff; }
+.game-info .bar > span { background: #fff; }
+.rate { color: #ffd479; }
+.log-time { display: flex; flex-direction: column; gap: 8px; }
+.stat small { font-size: 0.7em; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.gaming-page .trio .stat b { font-size: clamp(1.1rem, 5vw, 1.45rem); }

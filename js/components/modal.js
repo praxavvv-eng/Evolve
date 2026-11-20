@@ -28,7 +28,7 @@ export function openSheet(o = {}) {
   overlay.className = `overlay ${o.overlayClass || ''} ${stack.length ? 'is-stacked' : ''}`;
   const labelId = `sheet-title-${stack.length}`;
   overlay.innerHTML = o.bare ? o.body : `
-    <section class="sheet ${o.size ? `sheet-${o.size}` : ''} ${o.className || ''}" role="dialog" aria-modal="true" ${o.title ? `aria-labelledby="${labelId}"` : ''}>
+    <section class="sheet ${o.size ? o.size.split(' ').map(z => `sheet-${z}`).join(' ') : ''} ${o.className || ''}" role="dialog" aria-modal="true" ${o.title ? `aria-labelledby="${labelId}"` : ''}>
       <div class="sheet-handle" data-drag></div>
       <header class="sheet-head" data-drag>
         <div><h2 id="${labelId}">${esc(o.title || '')}</h2>${o.subtitle ? `<p>${esc(o.subtitle)}</p>` : ''}</div>
@@ -53,16 +53,20 @@ export function openSheet(o = {}) {
       try { o.onClose?.(result); } catch (e) { console.error(e); }
       if (opener && document.contains(opener) && typeof opener.focus === 'function') setTimeout(() => opener.focus({ preventScroll: true }), 30);
     },
+    /** Every user-initiated close (backdrop, X, Cancel, Escape, drag) goes through here so unsaved input is protected. */
+    requestClose() {
+      if (api.guard && !api.guard()) {
+        if (api.onBlocked) { api.onBlocked(); return; }
+        sheet.classList.remove('is-nudge'); void sheet.offsetWidth; sheet.classList.add('is-nudge'); return;
+      }
+      api.close();
+    },
     dismissable: o.dismissable !== false
   };
   stack.push(api);
 
-  overlay.addEventListener('mousedown', e => {
-    if (e.target !== overlay || !api.dismissable) return;
-    if (api.guard && !api.guard()) { sheet.classList.remove('is-nudge'); void sheet.offsetWidth; sheet.classList.add('is-nudge'); return; }   // unsaved input: ignore the tap
-    api.close();
-  });
-  overlay.addEventListener('click', e => { if (e.target.closest('[data-sheet-close]')) api.close(); });
+  overlay.addEventListener('mousedown', e => { if (e.target === overlay && api.dismissable) api.requestClose(); });
+  overlay.addEventListener('click', e => { if (e.target.closest('[data-sheet-close]')) api.requestClose(); });
 
   /* drag-to-dismiss (touch, phones only) */
   const handle = overlay.querySelectorAll('[data-drag]');
@@ -72,7 +76,7 @@ export function openSheet(o = {}) {
     h.addEventListener('touchmove', e => { if (!dragging) return; dy = Math.max(0, e.touches[0].clientY - startY); sheet.style.transform = `translateY(${dy}px)`; }, { passive: true });
     h.addEventListener('touchend', () => {
       if (!dragging) return; dragging = false; sheet.classList.remove('is-dragging');
-      if (dy > 110 && !(api.guard && !api.guard())) api.close(); else sheet.style.transform = '';
+      if (dy > 110) { sheet.style.transform = ''; api.requestClose(); } else sheet.style.transform = '';
     });
   });
 
@@ -93,7 +97,7 @@ document.addEventListener('keydown', e => {
   const top = topSheet(); if (!top) return;
   if (e.key === 'Escape') {
     if (document.querySelector('.dd-pop, .menu')) return;      // popovers handle their own Escape first
-    if (top.dismissable) { e.preventDefault(); top.close(); }
+    if (top.dismissable) { e.preventDefault(); top.requestClose(); }
     return;
   }
   if (e.key !== 'Tab') return;

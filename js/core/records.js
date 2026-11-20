@@ -123,15 +123,29 @@ export function toggleTask(id) {
 /* ---------------- habits ---------------- */
 export function toggleHabit(id, date = todayStr()) {
   let done = false, xp = 0;
+  if (!isDateStr(date) || date > todayStr()) return { done: false, xp: 0 };          // future days cannot be checked in
   State.update(s => {
     s.habitLogs[date] = s.habitLogs[date] || {};
     done = !s.habitLogs[date][id];
-    if (done) s.habitLogs[date][id] = true; else delete s.habitLogs[date][id];
+    if (done) { s.habitLogs[date][id] = true; const hb = s.habits.find(x => x.id === id); if (hb?.skips?.[date]) delete hb.skips[date]; } else delete s.habitLogs[date][id];
     if (!Object.keys(s.habitLogs[date]).length) delete s.habitLogs[date];
     if (done && date === todayStr()) xp = award(s, `habit:${date}:${id}`, 8, 'consistency', 'Habit check-in').points;
   });
   checkProgress();
   return { done, xp };
+}
+
+/** Mark (or unmark) a rest day for one habit. A rest day is not a failure and never breaks a streak. */
+export function toggleHabitRest(id, date) {
+  let rest = false;
+  State.update(s => {
+    const h = s.habits.find(x => x.id === id); if (!h) return;
+    h.skips = h.skips || {};
+    rest = !h.skips[date];
+    if (rest) { h.skips[date] = true; if (s.habitLogs[date]?.[id]) { delete s.habitLogs[date][id]; if (!Object.keys(s.habitLogs[date]).length) delete s.habitLogs[date]; } } else delete h.skips[date];
+    h.updatedAt = new Date().toISOString();
+  });
+  return rest;
 }
 
 /* ---------------- academics ---------------- */

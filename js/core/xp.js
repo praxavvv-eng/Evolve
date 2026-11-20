@@ -6,7 +6,7 @@
 import * as State from './state.js';
 import { emit } from './events.js';
 import { todayStr, uid } from './utils.js';
-import { habitStreak, budgetSpent, maxChallengeStreak } from './stats.js';
+import { habitStreakDays, budgetSpent, maxChallengeStreak } from './stats.js';
 import { monthKey } from './utils.js';
 
 export const RANKS = ['Beginner', 'Explorer', 'Builder', 'Achiever', 'Specialist', 'Expert', 'Master', 'Elite', 'Legend'];
@@ -51,7 +51,7 @@ const finishedBooks = s => s.books.filter(b => b.status === 'Finished').length;
 export const ACHIEVEMENTS = [
   { id: 'first-step', name: 'First step', desc: 'Record your first rewarded activity', icon: 'sparkles', test: s => Object.keys(s.rewardEvents).length >= 1 },
   { id: 'tasks-10', name: 'Task finisher', desc: 'Complete 10 tasks', icon: 'check-square', test: s => s.tasks.filter(t => t.done).length >= 10 },
-  { id: 'habit-7', name: 'A full week', desc: 'Hold a 7-day habit streak', icon: 'flame', test: s => s.habits.some(h => habitStreak(s, h) >= 7) },
+  { id: 'habit-7', name: 'A full week', desc: 'Hold a 7-day habit streak', icon: 'flame', test: s => s.habits.some(h => habitStreakDays(s, h) >= 7) },
   { id: 'xp-500', name: 'Building rhythm', desc: 'Reach 500 total XP', icon: 'trending-up', test: s => s.xp >= 500 },
   { id: 'level-3', name: 'Getting consistent', desc: 'Reach level 3', icon: 'repeat', test: s => levelInfo(s.xp).level >= 3 },
   { id: 'level-5', name: 'Established', desc: 'Reach level 5', icon: 'award', test: s => levelInfo(s.xp).level >= 5 },

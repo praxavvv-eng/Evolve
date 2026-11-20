@@ -1,47 +1,85 @@
-/* Habits: a calm list, and a detail screen with the habit's own colour (--hc) */
+/* Habits: list, consistency graph, per-habit contribution graph. --hc is the habit's own colour. */
 .day-progress { padding: 0 2px; }
-.habit-row { gap: 12px; }
-.habit-glyph { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; flex: none; font-size: 1.25rem; background: color-mix(in srgb, var(--hc, var(--accent)) 18%, transparent); color: var(--hc, var(--accent-text)); }
-.habit-glyph.is-lg { width: 52px; height: 52px; border-radius: 17px; font-size: 1.5rem; }
-.habit-row .row-sub { display: flex; align-items: center; gap: 8px; }
-.dots7 { display: inline-flex; gap: 3px; }
+.habit-row { gap: 12px; padding-right: 8px; }
+.habit-row.is-off .habit-glyph, .habit-row.is-off .row-title { opacity: 0.55; }
+.habit-glyph { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; font-size: 1.25rem; background: color-mix(in srgb, var(--hc, var(--accent)) 20%, transparent); }
+.habit-glyph.is-lg { width: 54px; height: 54px; border-radius: 17px; font-size: 1.55rem; }
+.habit-row .row-sub { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dots7 { display: inline-flex; gap: 3px; flex: none; }
 .dots7 i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); }
-.dots7 i.on { background: var(--hc); } .dots7 i.off { opacity: 0.4; }
+.dots7 i.on { background: var(--hc); }
+.dots7 i.rest { background: transparent; box-shadow: inset 0 0 0 1.5px var(--hc); opacity: 0.8; }
+.dots7 i.miss { background: color-mix(in srgb, var(--neg) 45%, transparent); }
+.dots7 i.off { opacity: 0.45; }
 .habit-row .check.is-on { background: var(--hc); border-color: var(--hc); color: var(--hc-on); }
-.habit-row .check { border-color: color-mix(in srgb, var(--hc) 55%, var(--line-strong)); }
+.habit-row .check { border-color: color-mix(in srgb, var(--hc) 60%, var(--line-strong)); }
+.rest-chip { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border-radius: 99px; font-size: 0.76rem; font-weight: 640; background: color-mix(in srgb, var(--hc) 14%, transparent); color: var(--text-2); }
+.habit-hero { align-items: center; }
 
-/* heatmap */
-.hm-scroll { overflow-x: auto; padding-bottom: 6px; margin-inline: calc(var(--pad) * -1); padding-inline: var(--pad); scrollbar-width: none; }
+/* consistency overview */
+.overview .hm-scroll { margin-inline: 0; padding-inline: 0; }
+.hm.ov { --cs: 13px; }
+.hm.ov .hm-grid { grid-template-columns: repeat(var(--wk), 1fr); }
+.ov-0, .hm-cell.ov-0 { background: var(--surface-3); }
+.ov-1, .hm-cell.ov-1 { background: color-mix(in srgb, var(--accent) 28%, var(--surface-3)); }
+.ov-2, .hm-cell.ov-2 { background: color-mix(in srgb, var(--accent) 52%, var(--surface-3)); }
+.ov-3, .hm-cell.ov-3 { background: color-mix(in srgb, var(--accent) 76%, var(--surface-3)); }
+.ov-4, .hm-cell.ov-4 { background: var(--accent); }
+.hm-cell.ov-n { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.ov-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; font-size: 0.7rem; color: var(--text-3); }
+.ov-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.ov-legend span:first-child { margin-right: 4px; } .ov-legend span:last-child { margin-left: 4px; }
+
+/* contribution graph */
+.hm-wrap { display: flex; gap: 8px; align-items: flex-start; }
+.hm-wd { display: grid; grid-template-rows: repeat(7, 15px); gap: 4px; padding-top: 20px; font-size: 0.62rem; font-weight: 600; color: var(--text-3); flex: none; width: 24px; }
+.hm-wd span { line-height: 15px; }
+.hm-scroll { overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; flex: 1; min-width: 0; }
 .hm-scroll::-webkit-scrollbar { display: none; }
-.hm { display: inline-flex; flex-direction: column; gap: 8px; min-width: min-content; }
-.hm-months { display: grid; grid-template-columns: repeat(53, 15px); gap: 4px; font-size: 0.66rem; font-weight: 600; color: var(--text-3); height: 12px; }
+.hm { display: inline-flex; flex-direction: column; gap: 6px; min-width: min-content; }
+.hm-months { display: grid; grid-template-columns: repeat(var(--wk, 53), 15px); gap: 4px; font-size: 0.66rem; font-weight: 600; color: var(--text-3); height: 14px; }
 .hm-months span { white-space: nowrap; overflow: visible; }
-.hm-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(53, 15px); gap: 4px; }
+.hm-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(var(--wk, 53), 15px); gap: 4px; }
 .hm-col { display: grid; grid-template-rows: repeat(7, 15px); gap: 4px; }
-.hm-cell { width: 15px; height: 15px; border-radius: 4px; background: var(--surface-3); padding: 0; transition: transform var(--t-fast) var(--ease); }
-.hm-cell:hover { transform: scale(1.25); }
+.hm-cell { width: 15px; height: 15px; border-radius: 4px; background: var(--surface-3); padding: 0; transition: transform var(--t-fast) var(--ease); display: block; }
+button.hm-cell:hover { transform: scale(1.25); }
+.hm.ov .hm-cell { width: auto; min-width: 11px; height: 13px; border-radius: 3.5px; }
+.hm.ov .hm-col { grid-template-rows: repeat(7, 13px); gap: 3px; }
+.hm.ov .hm-grid { gap: 3px; grid-template-columns: repeat(var(--wk), minmax(11px, 1fr)); }
+.hm-cell.is-out { background: transparent; pointer-events: none; }
 .hm-cell.is-done { background: var(--hc); }
-.hm-cell.is-missed { background: color-mix(in srgb, var(--text) 10%, transparent); }
-.hm-cell.is-off, .hm-cell.is-pre { background: color-mix(in srgb, var(--text) 4%, transparent); }
-.hm-cell.is-open { background: color-mix(in srgb, var(--hc) 22%, transparent); }
-.hm-cell.is-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent); }
+.hm-cell.is-missed { background: color-mix(in srgb, var(--neg) 22%, var(--surface-3)); }
+.hm-cell.is-rest { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--hc) 55%, transparent) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc) 40%, transparent); }
+.hm-cell.is-off { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.hm-cell.is-pre { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent); }
+.hm-cell.is-open { background: color-mix(in srgb, var(--hc) 24%, transparent); }
+.hm-cell.is-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 13%, transparent); }
 .hm-cell.is-today, .hw-day.is-today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
-.hm-cell.is-sel, .hw-day.is-sel { outline: 2px solid var(--hc); outline-offset: 2px; }
+.hm-cell.is-sel, .hw-day.is-sel { outline: 2px solid var(--hc, var(--accent)); outline-offset: 2px; }
+.year-label { min-width: 3.4ch; text-align: center; font-size: 0.95rem; }
+
 .hw { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
 .hw-day { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 10px; border-radius: 16px; background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text-3); transition: transform var(--t-fast) var(--ease); }
 .hw-day:active { transform: scale(0.94); }
 .hw-day small { font-size: 0.68rem; font-weight: 650; }
 .hw-day span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.95rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .hw-day.is-done { background: var(--hc); color: var(--hc-on); }
+.hw-day.is-rest { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--hc) 40%, transparent) 0 3px, transparent 3px 6px); color: var(--text-2); }
+.hw-day.is-missed { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--text-2); }
 .hw-day.is-future { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
 .hw-day.is-off, .hw-day.is-pre { opacity: 0.5; }
-.hw-day.is-today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
-.hm-legend { display: flex; gap: 16px; font-size: 0.74rem; color: var(--text-3); }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.72rem; color: var(--text-3); }
 .hm-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
-.hm-legend .lg-done { background: var(--hc, var(--accent)); } .hm-legend .lg-missed { background: color-mix(in srgb, var(--text) 14%, transparent); }
-.hm-legend .lg-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 25%, transparent); } .hm-legend .lg-slip { background: var(--warn); }
-.hm-sel { display: flex; flex-direction: column; gap: 1px; font-size: 0.82rem; color: var(--text-3); } .hm-sel b { color: var(--text); font-size: 0.95rem; }
-.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 16px; padding: 4px 2px; }
-.stat-grid .stat b { font-size: 1.9rem; letter-spacing: -0.04em; color: var(--hc, var(--text)); }
+.hm-legend .lg-done { background: var(--hc, var(--accent)); }
+.hm-legend .lg-rest { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--hc, var(--accent)) 60%, transparent) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hc, var(--accent)) 40%, transparent); }
+.hm-legend .lg-missed { background: color-mix(in srgb, var(--neg) 30%, var(--surface-3)); }
+.hm-legend .lg-off { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.hm-legend .lg-future { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 25%, transparent); }
+.hm-sel { display: flex; flex-direction: column; gap: 1px; font-size: 0.84rem; color: var(--text-3); min-width: 0; } .hm-sel b { color: var(--text); font-size: 0.98rem; }
+.sel-panel { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sel-actions { display: flex; gap: 8px; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 16px; }
+.stat-grid .stat b { font-size: 1.85rem; letter-spacing: -0.04em; color: var(--hc, var(--text)); }
+.stat-grid .stat b small { font-size: 0.8rem; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
 .stat-grid.is-3 { grid-template-columns: repeat(3, 1fr); }
-@media (min-width: 720px) { .stat-grid:not(.is-3) { grid-template-columns: repeat(5, 1fr); } }
+@media (min-width: 720px) { .stat-grid:not(.is-3) { grid-template-columns: repeat(4, 1fr); } }

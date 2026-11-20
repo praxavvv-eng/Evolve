@@ -43,15 +43,17 @@ const mark = (text, tokens) => { let out = esc(text); tokens.forEach(t => { if (
 
 export function openSearch() {
   const index = buildIndex();
-  let results = [], active = 0;
+  let results = [], active = 0, only = '';
+  const groups = [...new Set(index.map(i => i.group))].filter(g => g !== 'Go to');
   const api = openSheet({ bare: true, overlayClass: 'is-search', dismissable: true,
-    body: `<div class="palette" role="dialog" aria-modal="true" aria-label="Search"><div class="palette-input">${icon('search', { size: 20 })}<input type="search" id="pal-q" placeholder="Search everything…" autocomplete="off" spellcheck="false" aria-label="Search" aria-controls="pal-list"><button class="icon-btn" type="button" data-sheet-close aria-label="Close search">${icon('x', { size: 18 })}</button></div><div class="palette-results" id="pal-list" role="listbox"></div></div>` });
-  const input = api.el.querySelector('#pal-q'), list = api.el.querySelector('#pal-list');
+    body: `<div class="palette" role="dialog" aria-modal="true" aria-label="Search"><div class="palette-input">${icon('search', { size: 20 })}<input type="search" id="pal-q" placeholder="Search everything…" autocomplete="off" spellcheck="false" aria-label="Search" aria-controls="pal-list"><button class="icon-btn" type="button" data-sheet-close aria-label="Close search">${icon('x', { size: 18 })}</button></div><div class="pal-filters" id="pal-filters" role="group" aria-label="Filter results"></div><div class="palette-results" id="pal-list" role="listbox"></div></div>` });
+  const input = api.el.querySelector('#pal-q'), list = api.el.querySelector('#pal-list'), filters = api.el.querySelector('#pal-filters');
+  const drawFilters = () => { filters.innerHTML = ['', ...groups].map(g => `<button type="button" class="chip ${only === g ? 'is-on' : ''}" data-g="${esc(g)}" aria-pressed="${only === g}">${g || 'All'}</button>`).join(''); filters.hidden = !input.value.trim(); };
 
   function draw() {
     const q = input.value.trim().toLowerCase(), tokens = q.split(/\s+/).filter(Boolean);
-    results = tokens.length ? index.map(i => ({ i, sc: score(i, tokens) })).filter(x => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 30).map(x => x.i) : index.filter(i => i.group === 'Go to');
-    active = 0;
+    results = tokens.length ? index.filter(i => !only || i.group === only).map(i => ({ i, sc: score(i, tokens) })).filter(x => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 30).map(x => x.i) : index.filter(i => i.group === 'Go to');
+    active = 0; drawFilters();
     if (!results.length) { list.innerHTML = `<div class="pal-empty">No matches for “${esc(input.value.trim())}”.<br>Try a title, a category or part of a note.</div>`; return; }
     let last = '';
     list.innerHTML = results.map((r, k) => `${r.group !== last ? `<div class="pal-group">${(last = r.group, esc(tokens.length ? r.group : 'Jump to'))}</div>` : ''}<button type="button" class="pal-item ${k === 0 ? 'is-active' : ''}" role="option" data-k="${k}" aria-selected="${k === 0}"><span class="row-lead">${icon(r.ic, { size: 16 })}</span><span class="row-main"><span class="row-title trunc">${mark(r.title, tokens)}</span><span class="row-sub trunc">${esc(r.sub || '')}</span></span></button>`).join('');
@@ -60,21 +62,28 @@ export function openSearch() {
   const run = k => { const r = results[k]; if (!r) return; api.close(); setTimeout(() => r.run(), 40); };
   let timer; input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(draw, 70); });   // keep typing instant on large workspaces
   input.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); mv(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); mv(-1); } else if (e.key === 'Enter') { e.preventDefault(); run(active); } });
+  filters.addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (!b) return; only = b.dataset.g; draw(); input.focus(); });
   list.addEventListener('click', e => { const b = e.target.closest('.pal-item'); if (b) run(Number(b.dataset.k)); });
   draw(); setTimeout(() => input.focus(), 30);
 }
 
 /* ---------------- quick add ---------------- */
-const PRIMARY = [['task', 'Task', 'check-square', {}], ['habit', 'Habit', 'repeat', {}], ['transaction', 'Transaction', 'receipt', {}], ['workout', 'Workout', 'dumbbell', {}], ['game', 'Game', 'gamepad', {}], ['academic', 'Academic item', 'graduation', {}], ['note', 'Note', 'notebook', {}]];
-const MORE = [['event', 'Event', 'calendar', {}], ['challenge', 'Challenge', 'shield', {}], ['book', 'Book', 'book', {}], ['goal', 'Goal', 'target', {}], ['subject', 'Subject', 'graduation', {}], ['budget', 'Budget', 'wallet', {}], ['savingsGoal', 'Savings goal', 'piggy', {}], ['workoutTemplate', 'Workout plan', 'list', {}], ['bodyMetric', 'Measurement', 'trending-up', {}]];
+/* Grouped by intent. Expense and Income open the amount-first form with the right type already chosen. */
+const GROUPS = [
+  ['Plan', [['task', 'Task', 'check-square', {}, 'Something to do'], ['event', 'Event', 'calendar', {}, 'On the calendar'], ['goal', 'Goal', 'target', {}, 'With a deadline']]],
+  ['Growth', [['habit', 'Habit', 'repeat', {}, 'Build a streak'], ['challenge', 'Challenge', 'shield', {}, 'Stay disciplined']]],
+  ['Life', [['transaction', 'Expense', 'arrow-up-right', { type: 'expense' }, 'Money out'], ['transaction', 'Income', 'arrow-down-left', { type: 'income' }, 'Money in'], ['workout', 'Workout', 'dumbbell', {}, 'Sets and reps'], ['academic', 'Study item', 'graduation', {}, 'Assignment or exam'], ['subject', 'Subject', 'graduation', {}, 'Add a course']]],
+  ['Library', [['note', 'Note', 'notebook', {}, 'Write something'], ['book', 'Book', 'book', {}, 'Track reading'], ['game', 'Game', 'gamepad', {}, 'Track playtime']]]
+];
 
 export function openQuickAdd() {
-  const tile = ([type, label, ic]) => `<button type="button" class="quick-item" data-type="${type}"><span class="row-lead">${icon(ic, { size: 18 })}</span>${esc(label)}</button>`;
-  const api = openSheet({ title: 'Add', size: 'narrow', body: `<div class="quick-grid">${PRIMARY.map(tile).join('')}</div><div class="quick-more"><button class="link-btn" type="button" data-more aria-expanded="false">More ${icon('chevron-down', { size: 14 })}</button><div class="quick-grid mt-3" data-more-list hidden>${MORE.map(tile).join('')}</div></div>` });
+  const tile = ([type, label, ic, prefill, sub], k) => `<button type="button" class="quick-item" data-k="${k}"><span class="row-lead">${icon(ic, { size: 18 })}</span><span>${esc(label)}<small>${esc(sub)}</small></span></button>`;
+  const flat = []; 
+  const body = GROUPS.map(([name, items]) => `<div class="qa-group"><span class="t-micro">${name}</span><div class="quick-grid">${items.map(it => { flat.push(it); return tile(it, flat.length - 1); }).join('')}</div></div>`).join('');
+  const api = openSheet({ title: 'Quick add', size: 'narrow', body });
   api.el.addEventListener('click', e => {
-    const more = e.target.closest('[data-more]');
-    if (more) { const l = api.el.querySelector('[data-more-list]'); l.hidden = !l.hidden; more.setAttribute('aria-expanded', String(!l.hidden)); return; }
-    const t = e.target.closest('[data-type]'); if (!t) return;
-    api.close(); setTimeout(() => openForm(t.dataset.type), 120);
+    const t = e.target.closest('[data-k]'); if (!t) return;
+    const [type, , , prefill] = flat[Number(t.dataset.k)];
+    api.close(); setTimeout(() => openForm(type, { prefill }), 120);
   });
 }

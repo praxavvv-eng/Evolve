@@ -1,0 +1,115 @@
+/* ==========================================================================
+   Forms. One field vocabulary, several purpose-built layouts:
+     .form                 standard grid
+     .form.is-amount       amount-first (Finance)
+     .form.is-writing      comfortable writing (Notes)
+     .form.is-cover        cover first (Books, Games)
+     .form.is-compact      short quick-entry forms (Tasks, Events)
+   ========================================================================== */
+.form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+.form > .field, .form > .fgroup { grid-column: 1 / -1; }
+.form > .field.is-half { grid-column: span 1; }
+.form .form-note { grid-column: 1 / -1; font-size: var(--fs-small); color: var(--text-2); padding: 12px 14px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--line); }
+.form > .field { animation: rise var(--t-med) var(--ease) both; }
+.form > .field:nth-child(2) { animation-delay: 30ms; } .form > .field:nth-child(3) { animation-delay: 60ms; } .form > .field:nth-child(4) { animation-delay: 90ms; } .form > .field:nth-child(n+5) { animation-delay: 120ms; }
+.field:focus-within > label, .field:focus-within > .label-row label { color: var(--accent-text); }
+.field-error { animation: rise var(--t-fast) var(--ease) both; }
+.form-more { grid-column: 1 / -1; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-2); }
+.form-more > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 14px; font-weight: 620; font-size: 0.9rem; cursor: pointer; color: var(--text-2); }
+.form-more > summary::-webkit-details-marker { display: none; }
+.form-more > summary .i { transition: transform var(--t-med) var(--ease); }
+.form-more[open] > summary .i { transform: rotate(180deg); }
+.form-more > .form-more-body { display: grid; gap: 16px; padding: 4px 14px 16px; }
+
+/* ----- amount-first (Finance) ----- */
+.amount-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 0 6px; }
+.amount-hero .ah-label { font-size: var(--fs-caption); font-weight: 650; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; }
+.amount-line { display: flex; align-items: baseline; justify-content: center; gap: 6px; width: 100%; }
+.amount-line .sym { font-size: clamp(1.6rem, 7vw, 2.2rem); font-weight: 600; color: var(--text-3); line-height: 1; transform: translateY(-2px); }
+.amount-line input { width: 1.5ch; max-width: 9ch; min-width: 1.2ch; min-height: 0 !important; height: auto !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; text-align: left; font-size: clamp(2.6rem, 13vw, 3.6rem) !important; font-weight: 700; letter-spacing: -0.045em; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.amount-line input::placeholder { color: var(--surface-3) !important; }
+.amount-line.is-income input { color: var(--pos); }
+.amount-hero .field-error { justify-content: center; }
+.type-seg { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: var(--r-pill); background: var(--surface-2); border: 1px solid var(--line); gap: 4px; }
+[data-style="classic"] .type-seg { border-radius: 14px; }
+.type-seg label { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; border-radius: var(--r-pill); font-weight: 640; font-size: 0.92rem; color: var(--text-2); cursor: pointer; transition: background var(--t-med) var(--ease), color var(--t-fast); }
+[data-style="classic"] .type-seg label { border-radius: 10px; }
+.type-seg input { position: absolute; opacity: 0; pointer-events: none; }
+.type-seg label:has(input:checked) { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--line); }
+.type-seg label:has(input[value="expense"]:checked) { color: var(--neg); }
+.type-seg label:has(input[value="income"]:checked) { color: var(--pos); }
+[data-scheme="light"] .type-seg label:has(input:checked) { background: #fff; }
+
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.cat-opt { position: relative; cursor: pointer; }
+.cat-opt input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.cat-opt span { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 12px 4px 10px; border-radius: var(--r-md); border: 1.5px solid transparent; background: var(--surface-2); font-size: 0.72rem; font-weight: 620; color: var(--text-2); text-align: center; transition: background var(--t-med) var(--ease), border-color var(--t-med), color var(--t-fast), transform var(--t-fast) var(--ease); }
+.cat-opt span .i { color: var(--text-3); transition: color var(--t-fast), transform var(--t-med) var(--spring); }
+.cat-opt:active span { transform: scale(0.94); }
+.cat-opt input:checked + span { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-text); }
+.cat-opt input:checked + span .i { color: var(--accent-text); transform: scale(1.1); }
+.cat-opt input:focus-visible + span { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* ----- steppers (sets, reps, weight) ----- */
+.stepper { display: flex; align-items: stretch; border: 1px solid var(--line-strong); border-radius: var(--r-ctl); background: var(--surface-2); overflow: hidden; min-height: var(--h-input); }
+.stepper button { width: 46px; flex: none; display: grid; place-items: center; color: var(--text-2); transition: background var(--t-fast), color var(--t-fast); }
+.stepper button:hover { background: var(--surface-3); color: var(--text); }
+.stepper button:active { background: var(--accent-soft); color: var(--accent-text); }
+.stepper input { text-align: center; border: 0 !important; background: transparent !important; box-shadow: none !important; min-height: 0 !important; padding: 0 !important; font-weight: 650; font-size: 1.1rem !important; font-variant-numeric: tabular-nums; border-radius: 0 !important; min-width: 0; }
+.stepper:focus-within { border-color: var(--accent-text); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ----- weekday picker ----- */
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wd-opt { position: relative; }
+.wd-opt input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.wd-opt span { display: grid; place-items: center; height: 44px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); font-size: 0.82rem; font-weight: 650; color: var(--text-2); transition: background var(--t-med) var(--ease), color var(--t-fast), transform var(--t-fast) var(--ease); }
+.wd-opt input:checked + span { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.wd-opt:active span { transform: scale(0.92); }
+
+/* ----- priority / status as coloured pills ----- */
+.pill-seg { display: flex; gap: 8px; }
+.pill-seg label { position: relative; flex: 1; cursor: pointer; }
+.pill-seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pill-seg span { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: var(--r-ctl); border: 1.5px solid var(--line-strong); background: var(--surface-2); font-size: 0.88rem; font-weight: 620; color: var(--text-2); transition: background var(--t-med) var(--ease), border-color var(--t-med), color var(--t-fast); }
+.pill-seg span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pc, var(--text-3)); }
+.pill-seg input:checked + span { background: color-mix(in srgb, var(--pc, var(--accent)) 14%, transparent); border-color: color-mix(in srgb, var(--pc, var(--accent)) 55%, transparent); color: var(--text); }
+.pill-seg input:focus-visible + span { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* ----- colour picker ----- */
+.color-pick { display: flex; flex-wrap: wrap; gap: 12px; padding: 2px 0; }
+.color-opt { position: relative; width: 38px; height: 38px; cursor: pointer; }
+.color-opt input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+.color-opt span { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: rgba(0, 0, 0, 0.7); transition: transform var(--t-med) var(--spring), box-shadow var(--t-med); }
+.color-opt span .i { opacity: 0; transform: scale(0.5); transition: all var(--t-med) var(--spring); }
+.color-opt input:checked + span { transform: scale(1.12); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--c); }
+.color-opt input:checked + span .i { opacity: 1; transform: none; }
+.color-opt input:focus-visible + span { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+
+/* ----- cover picker ----- */
+.cover-pick { display: flex; align-items: center; gap: 16px; }
+.cover-pick .thumb { width: 84px; height: 120px; border-radius: 10px; background: var(--surface-3) center / cover; border: 1px solid var(--line); flex: none; display: grid; place-items: center; color: var(--text-3); box-shadow: var(--shadow-1); }
+.form.is-cover .cover-pick .thumb.is-poster { width: 96px; height: 128px; border-radius: 14px; }
+.cover-pick .cover-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+
+/* ----- writing layout (Notes) ----- */
+.form.is-writing { display: flex; flex-direction: column; gap: 12px; min-height: 100%; }
+.form.is-writing > .field { grid-column: auto; }
+.form.is-writing .w-kind .seg { align-self: flex-start; }
+.form.is-writing .w-title input { border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 0 !important; min-height: 0 !important; font-size: 1.7rem !important; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
+.form.is-writing .w-title input::placeholder { color: var(--surface-3); }
+.form.is-writing .w-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.form.is-writing .w-body textarea { flex: 1; min-height: 34vh; border: 0 !important; background: transparent !important; box-shadow: none !important; padding: 4px 0 !important; font-family: var(--font-serif); font-size: 1.1rem; line-height: 1.7; resize: none; }
+.form.is-writing .w-body textarea::placeholder { color: var(--text-3); }
+.form.is-writing > .field.is-half { display: inline-flex; }
+.sheet-full .sheet-body { display: flex; flex-direction: column; }
+.sheet-full .sheet-body > form { flex: 1; min-height: 0; }
+
+/* ----- big title (compact quick-entry) ----- */
+.form .t-big input { min-height: 56px; font-size: 1.15rem; font-weight: 620; letter-spacing: -0.015em; }
+
+.stepper input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button, .amount-line input::-webkit-outer-spin-button, .amount-line input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.amount-line input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.form.is-amount .type-seg { margin-bottom: 2px; }
+.form.is-cover .cover-pick { grid-column: 1 / -1; padding: 4px 0 2px; }
+.form.is-cover .field.t-big { margin-top: -4px; }

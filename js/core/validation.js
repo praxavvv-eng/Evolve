@@ -21,7 +21,11 @@ const rules = {
     return { r, e };
   },
   habit(raw) {
-    const e = {}, r = { name: str(raw.name, 80), color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? String(raw.color).toLowerCase() : '#5cc28a', icon: str(raw.icon, 4) || '✦', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule: oneOf(raw.schedule, OPTIONS.habitSchedule, 'Daily') };
+    const e = {}, schedule = oneOf(raw.schedule, OPTIONS.habitSchedule, 'Daily');
+    const days = (Array.isArray(raw.days) ? raw.days : String(raw.days ?? '').split(',').filter(x => x !== '')).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6);
+    const r = { name: str(raw.name, 80), description: str(raw.description, 200), color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? String(raw.color).toLowerCase() : '#5cc28a', icon: str(raw.icon, 4) || '✦', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule };
+    if (schedule === 'Custom') { r.days = [...new Set(days)].sort(); if (!r.days.length) e.days = 'Choose at least one day.'; }
+    if (schedule === '3 days / week') r.perWeek = clamp(Math.round(num(raw.perWeek, 3)), 1, 6);
     if (!r.name) e.name = 'Give the habit a name.';
     return { r, e };
   },
@@ -83,7 +87,7 @@ const rules = {
     return { r, e };
   },
   transaction(raw) {
-    const e = {}, r = { type: raw.type === 'income' ? 'income' : 'expense', amount: Math.round(num(raw.amount) * 100) / 100, category: oneOf(raw.category, OPTIONS.txCategory, 'Other'), date: raw.date, note: str(raw.note, 150), recurrence: oneOf(raw.recurrence, OPTIONS.recurrence, 'None') };
+    const e = {}, r = { type: raw.type === 'income' ? 'income' : 'expense', amount: Math.round(num(raw.amount) * 100) / 100, category: oneOf(raw.category, [...OPTIONS.txCategory, ...OPTIONS.incomeCategory], 'Other'), date: raw.date, note: str(raw.note, 150), recurrence: oneOf(raw.recurrence, OPTIONS.recurrence, 'None') };
     if (!(r.amount > 0)) e.amount = 'Enter an amount above zero.';
     requireDate(raw, 'date', e);
     return { r, e };

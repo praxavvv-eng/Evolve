@@ -1,0 +1,76 @@
+/* ==========================================================================
+   Appearance presets. One layout, four materials. Each preset only changes tokens that the shared
+   components read (card surface, radius, borders, shadows, page backdrop), so every screen follows.
+   ========================================================================== */
+:root {
+  --card-bg: var(--surface);
+  --card-border: 1px solid var(--line);
+  --card-shadow: var(--shadow-1);
+  --card-blur: none;
+  --backdrop: none;
+}
+
+/* ---------- Minimal: flat, spacious, Apple-inspired ---------- */
+[data-style="minimal"] { --card-border: 1px solid var(--line); --card-shadow: none; --r-card: 20px; }
+[data-style="minimal"][data-scheme="light"] { --card-shadow: 0 1px 2px rgba(15, 15, 30, 0.04); }
+
+/* ---------- Glass: translucent, layered ---------- */
+[data-style="glass"] {
+  --card-bg: rgba(var(--surface-rgb), calc(var(--glass-alpha) * 0.62));
+  --card-border: 1px solid rgba(255, 255, 255, 0.12);
+  --card-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --card-blur: blur(var(--glass-blur)) saturate(1.6);
+  --r-card: 24px; --r-ctl: 14px;
+  --backdrop:
+    radial-gradient(60% 40% at 12% 0%, rgba(var(--accent-rgb), 0.4), transparent 70%),
+    radial-gradient(50% 36% at 100% 22%, rgba(var(--accent-rgb), 0.24), transparent 70%),
+    radial-gradient(60% 40% at 30% 100%, rgba(var(--accent-rgb), 0.28), transparent 70%);
+}
+[data-style="glass"][data-scheme="light"] {
+  --card-bg: rgba(255, 255, 255, calc(var(--glass-alpha) * 0.78));
+  --card-border: 1px solid rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 10px 34px -10px rgba(var(--accent-rgb), 0.28), 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 0 0 1px rgba(15, 15, 30, 0.05);
+  --backdrop:
+    radial-gradient(60% 40% at 10% 0%, rgba(var(--accent-rgb), 0.32), transparent 70%),
+    radial-gradient(50% 36% at 100% 24%, rgba(var(--accent-rgb), 0.2), transparent 70%),
+    radial-gradient(60% 40% at 30% 100%, rgba(var(--accent-rgb), 0.22), transparent 70%);
+}
+
+/* ---------- Cinematic: depth, atmosphere, expressive type ---------- */
+[data-style="cinematic"] {
+  --card-bg: linear-gradient(165deg, color-mix(in srgb, var(--surface-2) 70%, transparent), var(--surface) 70%);
+  --card-border: 1px solid var(--line-strong);
+  --card-shadow: var(--shadow-2), var(--highlight);
+  --r-card: 24px; --r-sheet: 32px;
+  --backdrop:
+    radial-gradient(90% 42% at 50% -8%, rgba(var(--accent-rgb), 0.42), transparent 72%),
+    radial-gradient(70% 30% at 50% 108%, rgba(var(--accent-rgb), 0.16), transparent 70%);
+  --ls-title: -0.04em;
+}
+[data-style="cinematic"][data-scheme="light"] {
+  --card-bg: linear-gradient(165deg, #ffffff, #f7f8fb);
+  --card-border: 1px solid var(--line);
+  --backdrop: radial-gradient(90% 38% at 50% -8%, rgba(var(--accent-rgb), 0.24), transparent 72%);
+}
+
+/* ---------- Classic / Casual: friendly, conventional ---------- */
+[data-style="classic"] {
+  --card-border: 1px solid var(--line-strong);
+  --card-shadow: 0 1px 0 rgba(0, 0, 0, 0.03), 0 4px 14px -6px rgba(0, 0, 0, 0.18);
+  --r-card: 16px; --r-ctl: 10px; --r-btn: 12px; --r-sheet: 22px;
+  --ls-title: -0.02em;
+}
+[data-style="classic"][data-scheme="light"] { --card-shadow: 0 1px 2px rgba(15, 15, 30, 0.05), 0 6px 16px -8px rgba(15, 15, 30, 0.14); }
+
+/* backdrop sits behind everything; it is cheap (one fixed gradient layer, no blur) */
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--backdrop); }
+
+/* ---------- graceful fallbacks ---------- */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [data-style="glass"] { --card-bg: var(--surface); --card-blur: none; }
+}
+[data-gfx="lite"] { --glass-blur: 8px; }
+[data-gfx="lite"] [data-style="glass"], [data-gfx="lite"][data-style="glass"] { --card-bg: var(--surface); --card-blur: none; --backdrop: none; }
+@media (prefers-reduced-transparency: reduce) {
+  [data-style="glass"] { --card-bg: var(--surface); --card-blur: none; }
+}

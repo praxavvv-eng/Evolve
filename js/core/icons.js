@@ -61,7 +61,22 @@ const P = {
   smartphone: '<rect x="7" y="2.5" width="10" height="19" rx="2.8"/><path d="M11 18.5h2"/>',
   copy: '<rect x="8.5" y="8.5" width="12" height="12" rx="3"/><path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1"/>',
-  piggy: '<path d="M18.5 10.2V8.8l1.7-.9-.6-2.4-2.4.5a8 8 0 0 0-4-1.1h-1.4C8.7 4.9 6 7 6 10c-1.5.8-2 2.3-2 3.7 0 1.3.9 2.3 2 2.8l.7 3.5h3l.3-1.4h3.5l.3 1.4h3l.7-3.2a5.5 5.5 0 0 0 1.5-3.9z"/><path d="M15.5 9.7h.01"/>'
+  piggy: '<path d="M18.5 10.2V8.8l1.7-.9-.6-2.4-2.4.5a8 8 0 0 0-4-1.1h-1.4C8.7 4.9 6 7 6 10c-1.5.8-2 2.3-2 3.7 0 1.3.9 2.3 2 2.8l.7 3.5h3l.3-1.4h3.5l.3 1.4h3l.7-3.2a5.5 5.5 0 0 0 1.5-3.9z"/><path d="M15.5 9.7h.01"/>',
+  utensils: '<path d="M7 3v7a2 2 0 0 0 4 0V3M9 3v18M17 21V3c-2.4 1.4-3.5 4.2-3.5 7.2 0 2 1.2 3.3 3.5 3.3"/>',
+  car: '<path d="M5 16v-4.2l1.8-4.6A2 2 0 0 1 8.7 6h6.6a2 2 0 0 1 1.9 1.2l1.8 4.6V16"/><path d="M3.5 16h17v3h-3v-1.6h-11V19h-3zM5.5 11.5h13M7.5 14h.01M16.5 14h.01"/>',
+  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+  film: '<rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M8 4.5v15M16 4.5v15M3.5 9.5H8M3.5 14.5H8M16 9.5h4.5M16 14.5h4.5"/>',
+  heart: '<path d="M12 20s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10z"/>',
+  briefcase: '<rect x="3.5" y="7.5" width="17" height="12" rx="3"/><path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5M3.5 13h17"/>',
+  gift: '<rect x="4" y="9" width="16" height="11" rx="2.5"/><path d="M12 9v11M3.5 9h17M12 9S11 4.5 8.5 4.5a2 2 0 0 0 0 4.5M12 9s1-4.5 3.5-4.5a2 2 0 0 1 0 4.5"/>',
+  tag: '<path d="M3.5 12.2V5.5a2 2 0 0 1 2-2h6.7l8.3 8.3a2 2 0 0 1 0 2.8l-6.4 6.4a2 2 0 0 1-2.8 0z"/><path d="M8 8h.01"/>',
+  minus: '<path d="M5 12h14"/>',
+  sort: '<path d="M7 4v16M7 20l-3.5-3.5M7 20l3.5-3.5M17 20V4M17 4l-3.5 3.5M17 4l3.5 3.5"/>',
+  'check-circle': '<circle cx="12" cy="12" r="9"/><path d="m8 12.3 2.7 2.7L16 9.5"/>',
+  dock: '<rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M3.5 15h17M8 18h.01M12 18h.01M16 18h.01"/>',
+  layout: '<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M3.5 9h17M9 9v11.5"/>',
+  coins: '<circle cx="9.5" cy="9.5" r="5.5"/><path d="M15.5 9.8A5.5 5.5 0 1 1 9.8 15.5M8 8.2h3.2M8 10.8h3.2"/>',
+  rest: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/><path d="M15 4v3M13.5 5.5h3"/>'
 };
 
 /** Returns an inline SVG string. */
@@ -70,3 +85,10 @@ export function icon(name, { size = 20, cls = '' } = {}) {
   return `<svg class="i ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 }
 export const iconNames = Object.keys(P);
+
+/** Evolve mark: a stem with three arms that grow shorter towards the base, like steps seen from the side.
+ *  Drawn in currentColor so it works on pure white and pure black; the top arm takes the accent colour. */
+export function logo(size = 28, { accent = true } = {}) {
+  return `<svg class="logo" width="${size}" height="${size}" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Evolve">
+    <path d="M19 15v34M19 32h19M19 49h11"/><path d="M19 15h27" ${accent ? 'stroke="var(--accent)"' : ''}/></svg>`;
+}

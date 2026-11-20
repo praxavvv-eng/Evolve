@@ -2,7 +2,7 @@
  * whether there is enough real data to show one at all. Responsive: SVGs use viewBox, bars use flex. */
 import { esc, clamp } from '../core/utils.js';
 
-export const CHART_COLORS = ['#d4bc8e', '#94b8d0', '#d39a6e', '#93c7a4', '#cda39b', '#b8b8c0', '#e5bd73', '#7fb5a6'];
+export const CHART_COLORS = ['#0a84ff', '#30b350', '#ff9500', '#8b5cf6', '#ff453a', '#8e8e93', '#32ade6', '#ffcc00'];
 
 /** Progress ring. value 0-100. */
 export function ring({ value = 0, size = 120, stroke = 10, label = '', sub = '', color = '', title = '' } = {}) {

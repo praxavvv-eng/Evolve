@@ -3,23 +3,23 @@
 import * as State from '../core/state.js';
 import { registerActions, registerChange, registerInput, emit } from '../core/events.js';
 import { contributeSavings, find } from '../core/records.js';
-import { esc, todayStr, monthKey, addMonths, fmtMonth, fmtMonthShort, fmtDate, money, num, daysInMonth, pct, groupBy, plural, relDay } from '../core/utils.js';
+import { debounce, esc, todayStr, monthKey, addMonths, fmtMonth, fmtMonthShort, fmtDate, money, num, daysInMonth, pct, groupBy, plural, relDay } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { monthTotals, recordedBalance, budgetSpent } from '../core/stats.js';
 import { donut, bars, progressBar, CHART_COLORS } from '../components/charts.js';
 import { pageHead, emptyState, addBtn, kebab, sectionHead, badge } from '../components/ui.js';
 import { selectHTML } from '../components/dropdown.js';
 import { openSheet } from '../components/modal.js';
-import { OPTIONS } from '../core/schemas.js';
+import { OPTIONS, CAT_ICONS } from '../core/schemas.js';
 import { toast } from '../components/toast.js';
 
 const ui = { tab: 'overview', month: monthKey(todayStr()), type: 'all', category: 'All', q: '', all: false };
 
 function txRow(t) {
   const inc = t.type === 'income';
-  return `<div class="row tx-row"><a class="tx-link" href="#/finance/tx/${esc(t.id)}" aria-label="Open ${esc(t.note || t.category)}">
-      <span class="row-lead tx-ico ${inc ? 'is-in' : ''}">${icon(inc ? 'arrow-down-left' : 'arrow-up-right', { size: 18 })}</span>
-      <span class="row-main"><span class="row-title trunc">${esc(t.note || t.category)}</span><span class="row-sub trunc">${esc(t.category)} · ${esc(fmtDate(t.date))}${t.recurrence && t.recurrence !== 'None' ? ` · ${esc(t.recurrence)}` : ''}</span></span>
+  return `<div class="row tx-row" data-id="${esc(t.id)}"><a class="tx-link" href="#/finance/tx/${esc(t.id)}" aria-label="Open ${esc(t.note || t.category)}">
+      <span class="row-lead tx-ico ${inc ? 'is-in' : ''}">${icon(CAT_ICONS[t.category] || 'tag', { size: 19 })}</span>
+      <span class="row-main"><span class="row-title trunc">${esc(t.note || t.category)}</span><span class="row-sub trunc">${esc(t.category)}${t.recurrence && t.recurrence !== 'None' ? ` · ${esc(t.recurrence)}` : ''}</span></span>
       <span class="tx-amt t-num ${inc ? 'pos' : ''}">${inc ? '+' : '−'}${esc(money(t.amount))}</span></a>${kebab('transaction', t.id)}</div>`;
 }
 
@@ -65,6 +65,7 @@ function renderOverview() {
       <div class="wallet-top"><span class="wallet-label">Recorded balance</span>${icon('wallet', { size: 22 })}</div>
       <div class="wallet-amount t-num">${esc(money(balance))}</div>
       <p class="wallet-note">Income minus expenses you have recorded</p>
+      <div class="wallet-foot"><div><small>In · ${esc(fmtMonthShort(ui.month))}</small><b class="t-num">${esc(money(cur.income, { compactMode: true }))}</b></div><div><small>Out · ${esc(fmtMonthShort(ui.month))}</small><b class="t-num">${esc(money(cur.expense, { compactMode: true }))}</b></div></div>
     </section>
 
 ` : ''}
@@ -76,6 +77,7 @@ function renderOverview() {
     ${ui.tab === 'overview' ? `
     <div class="trio" style="--i:3"><div class="card card-pad stat"><span>Income</span><b class="pos t-num">${esc(money(cur.income, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Spent</span><b class="t-num">${esc(money(cur.expense, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Net</span><b class="t-num ${cur.net < 0 ? 'neg' : ''}">${esc(money(cur.net, { compactMode: true }))}</b></div></div>
 
+    ${cur.items.length ? `<section style="--i:3"><div class="sec-head tight"><h2>Recent</h2><button type="button" class="link-btn" data-action="fin-tab" data-tab="transactions">See all ${icon('chevron-right', { size: 14 })}</button></div><div class="card card-flush"><div class="list">${[...cur.items].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 4).map(txRow).join('')}</div></div></section>` : ''}
     <div class="grid cols-2" style="--i:4">
       <section class="card card-pad"><h2 class="t-h2">Where it went</h2>
         ${segs.length ? `<div class="spend-row mt-4">${donut({ segments: segs, size: 132, stroke: 16, centerTop: money(cur.expense, { compactMode: true }), centerBottom: 'spent' })}<ul class="spend-legend">${segs.map(g => `<li><i style="--c:${g.color}"></i><span class="trunc">${esc(g.label)}</span><b class="t-num">${Math.round(pct(g.value, cur.expense))}%</b></li>`).join('')}</ul></div>` : `<p class="t-body mt-3">No spending recorded in ${esc(fmtMonth(ui.month))}.</p>`}</section>
@@ -101,9 +103,9 @@ function renderOverview() {
 
 ` : ''}
     ${ui.tab === 'transactions' ? `
-    <section style="--i:8">${sectionHead('Transactions', ui.all ? 'All time' : fmtMonth(ui.month))}
+    <section style="--i:8">
       <div class="filters"><div class="seg" role="group" aria-label="Type">${['all', 'income', 'expense'].map(t => `<button type="button" aria-pressed="${ui.type === t}" class="${ui.type === t ? 'is-on' : ''}" data-action="fin-type" data-type="${t}">${t === 'all' ? 'All' : t === 'income' ? 'Income' : 'Expenses'}</button>`).join('')}</div>
-        <div class="filters-row">${cat(['All', ...OPTIONS.txCategory], ui.category)}<button type="button" class="chip ${ui.all ? 'is-on' : ''}" data-action="fin-all" aria-pressed="${ui.all}">All time</button></div>
+        <div class="filters-row">${cat([{ value: 'All', label: 'All categories' }, ...OPTIONS.txCategory], ui.category)}<button type="button" class="chip ${ui.all ? 'is-on' : ''}" data-action="fin-all" aria-pressed="${ui.all}">All time</button></div>
         <input class="input" type="search" placeholder="Search description or category" value="${esc(ui.q)}" data-input="fin-q" data-keep="fin-q" aria-label="Search transactions"></div>
       ${list.length ? `<div class="stack mt-3">${dates.map(d => { const day = grouped[d]; const net = day.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0);
         return `<section class="card card-flush"><div class="day-head"><span>${esc(relDay(d, { done: true }))}${d === today ? '' : ''}</span><span class="t-num t-small ${net > 0 ? 'pos' : ''}">${esc(money(net, { sign: true }))}</span></div><div class="list">${day.map(txRow).join('')}</div></section>`; }).join('')}</div>`
@@ -117,7 +119,7 @@ function renderTx(id) {
   if (!t) return `<div class="card">${emptyState({ icon: 'receipt', title: 'Transaction not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/finance">Back to Finance</a>' })}</div>`;
   const inc = t.type === 'income';
   return `<header class="page-head"><div><p class="eyebrow">${inc ? 'Income' : 'Expense'}</p><h1 class="t-title">${esc(t.note || t.category)}</h1></div></header>
-    <div class="stack-lg"><section class="card card-pad tx-detail" style="--i:1"><div class="tx-big t-num ${inc ? 'pos' : ''}">${inc ? '+' : '−'}${esc(money(t.amount))}</div>${badge(inc ? 'Income' : 'Expense', inc ? 'pos' : '')}
+    <div class="stack-lg"><section class="card card-pad tx-detail" style="--i:1"><span class="row-lead tx-ico big ${inc ? 'is-in' : ''}">${icon(CAT_ICONS[t.category] || 'tag', { size: 24 })}</span><div class="tx-big t-num ${inc ? 'pos' : ''}">${inc ? '+' : '−'}${esc(money(t.amount))}</div>${badge(inc ? 'Income' : 'Expense', inc ? 'pos' : '')}
       <dl class="kv mt-4"><div><dt>Category</dt><dd>${esc(t.category)}</dd></div><div><dt>Date</dt><dd>${esc(fmtDate(t.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</dd></div><div><dt>Description</dt><dd>${esc(t.note || '—')}</dd></div><div><dt>Repeats</dt><dd>${esc(t.recurrence || 'None')}${t.recurrence && t.recurrence !== 'None' ? ' <span class="t-small">(label only)</span>' : ''}</dd></div></dl></section>
       <div class="row-gap" style="--i:2">${addBtn('transaction', 'Edit', { cls: 'btn btn-primary', id: t.id })}<button class="btn btn-danger" type="button" data-action="delete" data-type="transaction" data-id="${esc(t.id)}" data-back="#/finance">${icon('trash', { size: 18 })} Delete</button></div></div>`;
 }
@@ -139,7 +141,8 @@ registerActions({
   'save-add'(el) { openAddMoney(el.dataset.id); }
 });
 registerChange({ 'fin-cat'(el) { ui.category = el.value; emit('view:refresh'); } });
-registerInput({ 'fin-q'(el) { ui.q = el.value; emit('view:refresh'); } });
+const refreshSearch = debounce(() => emit('view:refresh'), 140);
+registerInput({ 'fin-q'(el) { ui.q = el.value; refreshSearch(); } });
 
 export const route = {
   id: 'finance',

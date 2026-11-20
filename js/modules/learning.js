@@ -1,8 +1,9 @@
 /* Books: a digital bookshelf with sharp covers, reading progress from currentPage / totalPages, and "Add pages". */
 import * as State from '../core/state.js';
-import { registerActions, emit } from '../core/events.js';
+import { registerActions, registerChange, registerInput, emit } from '../core/events.js';
 import { updateBookPage, addBookPages, find } from '../core/records.js';
-import { esc, fmtNum, fmtDate, plural, num } from '../core/utils.js';
+import { esc, fmtNum, fmtDate, plural, num, debounce } from '../core/utils.js';
+import { selectHTML } from '../components/dropdown.js';
 import { icon } from '../core/icons.js';
 import { bookProgress } from '../core/stats.js';
 import { pageHead, emptyState, addBtn, badge } from '../components/ui.js';
@@ -11,7 +12,8 @@ import { openSheet } from '../components/modal.js';
 import { toast } from '../components/toast.js';
 import { cover } from './gaming.js';
 
-const ui = { status: 'All' };
+const ui = { status: 'All', sort: 'recent', q: '' };
+const SORTS = [{ value: 'recent', label: 'Recently updated' }, { value: 'title', label: 'Title A–Z' }, { value: 'author', label: 'Author A–Z' }, { value: 'progress', label: 'Progress' }];
 const ORDER = ['Reading', 'To read', 'Paused', 'Finished', 'Dropped'];
 const KIND = { Reading: 'accent', Finished: 'pos', Paused: 'warn', Dropped: 'neg', 'To read': '' };
 const hasPages = b => num(b.totalPages) > 0;
@@ -26,18 +28,48 @@ function shelfCard(b) {
     ${hasPages(b) && b.status !== 'To read' ? progressBar(p) : ''}</span></a>`;
 }
 
+const ledge = '<span class="shelf-ledge" aria-hidden="true"></span>';
+const shelfItem = b => `<a class="shelf-item" href="#/learning/${esc(b.id)}" aria-label="${esc(b.title)}"><span class="book-cover">${bookCover(b)}</span><b class="clamp-2">${esc(b.title)}</b>${hasPages(b) && b.status !== 'To read' ? `<small>${Math.round(bookProgress(b))}%</small>` : `<small class="trunc">${esc(b.author || '')}</small>`}</a>`;
+const shelf = (title, sub, list) => (list.length ? `<section class="shelf"><div class="sec-head tight"><div><h2>${esc(title)}</h2>${sub ? `<p>${esc(sub)}</p>` : ''}</div></div><div class="shelf-row">${list.map(shelfItem).join('')}</div>${ledge}</section>` : '');
+
+function readingCard(b) {
+  const known = hasPages(b), p = bookProgress(b), left = known ? Math.max(0, b.totalPages - num(b.currentPage)) : 0;
+  return `<article class="reading-card card"><a class="rc-cover" href="#/learning/${esc(b.id)}" aria-label="Open ${esc(b.title)}"><span class="book-cover">${bookCover(b)}</span></a>
+    <div class="rc-main"><a href="#/learning/${esc(b.id)}" class="rc-title"><b class="clamp-2">${esc(b.title)}</b><small class="trunc">${esc(b.author || 'Unknown author')}</small></a>
+      <div class="rc-prog">${known ? progressBar(p) : ''}<span class="t-small t-num">${known ? `${fmtNum(b.currentPage)} of ${fmtNum(b.totalPages)} pages · ${fmtNum(left)} left` : `${fmtNum(b.currentPage)} pages read`}</span></div>
+      <button class="btn btn-soft btn-sm" type="button" data-action="book-add" data-id="${esc(b.id)}">${icon('plus', { size: 15 })} Add pages</button></div></article>`;
+}
+
+const sorters = { recent: (a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''), title: (a, b) => a.title.localeCompare(b.title), author: (a, b) => String(a.author || '~').localeCompare(String(b.author || '~')) || a.title.localeCompare(b.title), progress: (a, b) => bookProgress(b) - bookProgress(a) };
+
 function renderList() {
   const s = State.get(), books = s.books;
   const head = pageHead({ title: 'Books', sub: books.length ? plural(books.length, 'book') : 'Your bookshelf', actions: addBtn('book', 'Book') });
   if (!books.length) return `${head}<div class="card" style="--i:1">${emptyState({ icon: 'book', title: 'Your shelf is empty', text: 'Add what you are reading. Add pages as you go and progress follows.', action: addBtn('book', 'Add a book') })}</div>`;
+  const q = ui.q.trim().toLowerCase();
   const reading = books.filter(b => b.status === 'Reading'), finished = books.filter(b => b.status === 'Finished');
   const pages = books.reduce((a, b) => a + num(b.currentPage), 0);
   const count = st => (st === 'All' ? books.length : books.filter(b => b.status === st).length);
-  const list = books.filter(b => ui.status === 'All' || b.status === ui.status).sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title));
+  const matches = b => !q || `${b.title} ${b.author || ''}`.toLowerCase().includes(q);
+  const filters = `<div class="chips" role="group" aria-label="Filter books">${['All', ...ORDER].map(st => `<button type="button" class="chip ${ui.status === st ? 'is-on' : ''}" aria-pressed="${ui.status === st}" data-action="book-filter" data-status="${st}">${st}<span class="count">${count(st)}</span></button>`).join('')}</div>`;
+  const search = `<div class="search-field">${icon('search', { size: 18 })}<input type="search" class="input" placeholder="Search title or author" value="${esc(ui.q)}" data-input="bk-q" data-keep="bk-q" aria-label="Search books"></div>`;
+  const grouped = ui.status === 'All' && !q;
+  let body;
+  if (grouped) {
+    const by = st => books.filter(b => b.status === st).sort(sorters.recent);
+    body = `${reading.length ? `<section><div class="sec-head tight"><div><h2>Currently reading</h2></div></div><div class="stack">${by('Reading').map(readingCard).join('')}</div></section>` : ''}
+      ${shelf('Want to read', plural(by('To read').length, 'book'), by('To read'))}
+      ${shelf('Completed', plural(finished.length, 'book'), by('Finished'))}
+      ${shelf('On hold', '', [...by('Paused'), ...by('Dropped')])}`;
+  } else {
+    const list = books.filter(b => (ui.status === 'All' || b.status === ui.status) && matches(b)).sort(sorters[ui.sort] || sorters.recent);
+    body = `<div class="between"><span class="t-small">${plural(list.length, 'book')}</span>${selectHTML({ value: ui.sort, options: SORTS, label: 'Sort books', compact: true, dataChange: 'bk-sort' })}</div>
+      ${list.length ? `<div class="book-grid">${list.map(shelfCard).join('')}</div>` : `<div class="card">${emptyState({ icon: 'book', title: q ? 'No books match' : `No ${ui.status.toLowerCase()} books`, text: q ? 'Try a different title or author.' : 'Change a book’s status to move it here.' })}</div>`}`;
+  }
   return `${head}<div class="stack-lg">
     <div class="trio" style="--i:1"><div class="card card-pad stat"><b>${reading.length}</b><span>Reading</span></div><div class="card card-pad stat"><b>${finished.length}</b><span>Finished</span></div><div class="card card-pad stat"><b>${fmtNum(pages)}</b><span>Pages logged</span></div></div>
-    <div class="chips" style="--i:2" role="group" aria-label="Filter books">${['All', ...ORDER].map(st => `<button type="button" class="chip ${ui.status === st ? 'is-on' : ''}" aria-pressed="${ui.status === st}" data-action="book-filter" data-status="${st}">${st}<span class="count">${count(st)}</span></button>`).join('')}</div>
-    ${list.length ? `<div class="book-grid" style="--i:3">${list.map(shelfCard).join('')}</div>` : `<div class="card">${emptyState({ icon: 'book', title: `No ${ui.status.toLowerCase()} books`, text: 'Change a book’s status to move it here.' })}</div>`}</div>`;
+    <div class="stack" style="--i:2">${search}${filters}</div>
+    <div class="stack-lg" style="--i:3">${body}</div></div>`;
 }
 
 function renderDetail(id) {
@@ -82,6 +114,9 @@ function openAddPages(id) {
   });
 }
 
+const refreshBooks = debounce(() => emit('view:refresh'), 140);
+registerInput({ 'bk-q'(el) { ui.q = el.value; refreshBooks(); } });
+registerChange({ 'bk-sort'(el) { ui.sort = el.value; emit('view:refresh'); } });
 registerActions({
   'book-filter'(el) { ui.status = el.dataset.status; emit('view:refresh'); },
   'book-add'(el) { openAddPages(el.dataset.id); }

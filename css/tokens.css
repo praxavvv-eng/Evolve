@@ -1,140 +1,121 @@
 /* ==========================================================================
-   Design tokens. Every colour, radius, spacing and motion value used elsewhere comes from here.
-   data-scheme is resolved by JS to "dark" | "light" (so "System" needs no duplicated CSS).
-   data-amoled="true" deepens dark surfaces to true black. The accent is set at runtime.
+   Evolve design tokens.
+   Everything visual (colour, type, space, radius, motion, elevation) is defined here once.
+   JS resolves two things onto <html>:
+     data-scheme="light|dark"      (System is resolved by JS)      data-amoled="true|false"
+     data-style="minimal|glass|cinematic|classic"                  data-navstyle="minimal|cinematic|glass|casual"
+   and sets the accent variables (--accent, --accent-text, --on-accent, --accent-rgb) at runtime.
    ========================================================================== */
 :root {
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* ---------- typography: system stacks only, so Android, Windows and Apple all get a native face ---------- */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-serif: ui-serif, "New York", "Iowan Old Style", "Noto Serif", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
-  /* radius scale */
-  --r-xs: 8px; --r-sm: 12px; --r-md: 16px; --r-lg: 22px; --r-xl: 28px; --r-pill: 999px;
+  /* type scale (rem, multiplied by the Text size setting through the root font-size) */
+  --fs-micro: 0.6875rem; --fs-caption: 0.78rem; --fs-small: 0.8125rem; --fs-body: 0.9375rem; --fs-row: 0.97rem;
+  --fs-h3: 1.0625rem; --fs-h2: 1.25rem; --fs-title: clamp(1.75rem, 6vw, 2.25rem); --fs-hero: clamp(1.9rem, 6.6vw, 2.6rem);
+  --lh-tight: 1.1; --lh-snug: 1.3; --lh-body: 1.45;
+  --ls-title: -0.032em; --ls-h: -0.018em; --ls-body: -0.006em;
 
-  /* spacing scale (multiplied by density) */
+  /* ---------- spacing scale: no arbitrary values in modules ---------- */
   --d: 1;
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 56px;
-  --pad: 16px;                      /* page gutter */
-  --row-y: calc(14px * var(--d));   /* list row vertical padding */
-  --card-p: calc(18px * var(--d));
+  --pad: 20px;                              /* page gutter */
+  --gap-stack: 12px;                        /* between cards in a column */
+  --gap-section: 28px;                      /* between sections */
+  --card-p: calc(16px * var(--d));          /* card padding */
+  --row-y: calc(12px * var(--d));           /* list-row vertical padding */
+  --row-h: calc(56px * var(--d));
+  --h-btn: 48px; --h-btn-sm: 36px; --h-input: 50px; --h-chip: 34px; --tap: 44px;
 
-  /* glass (driven by Appearance > Glass intensity) */
-  --glass-blur: 20px;
-  --glass-alpha: 0.72;
+  /* ---------- radius ---------- */
+  --r-xs: 8px; --r-sm: 12px; --r-md: 16px; --r-lg: 20px; --r-xl: 28px; --r-pill: 999px;
+  --r-card: var(--r-lg); --r-ctl: var(--r-sm); --r-btn: var(--r-pill); --r-sheet: 28px;
 
-  /* motion */
+  /* ---------- motion ---------- */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-  --spring: cubic-bezier(0.34, 1.35, 0.64, 1);
-  --t-fast: 140ms; --t-med: 260ms; --t-slow: 480ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --t-fast: 140ms; --t-med: 240ms; --t-slow: 440ms;
 
-  /* layout */
+  /* ---------- layout ---------- */
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
-  --nav-h: 66px;
-  --nav-space: calc(var(--nav-h) + var(--safe-b) + 34px);
-  --topbar-h: 56px;
-  --sidebar-w: 252px;
-  --sidebar-w-collapsed: 76px;
+  --nav-h: 58px;
+  --nav-float: 0px;                          /* extra clearance for floating bars */
+  --nav-space: calc(var(--nav-h) + var(--safe-b) + var(--nav-float) + 36px);
+  --topbar-h: 52px;
+  --sidebar-w: 248px; --sidebar-w-collapsed: 76px;
   --content-max: 1120px;
 
-  /* accent: replaced at runtime by applyAppearance() */
-  --accent: #d4bc8e;
-  --accent-rgb: 212, 188, 142;
-  --accent-text: #d4bc8e;
-  --on-accent: #0b0b0c;
-  --accent-soft: rgba(var(--accent-rgb), 0.14);
-  --accent-line: rgba(var(--accent-rgb), 0.38);
+  /* ---------- glass (Appearance > Glass effect) ---------- */
+  --glass-blur: 22px; --glass-alpha: 0.7;
+
+  /* ---------- accent: replaced at runtime by applyAppearance() ---------- */
+  --accent: #0a6cff; --accent-rgb: 10, 108, 255; --accent-text: #0a6cff; --on-accent: #ffffff;
+  --accent-soft: rgba(var(--accent-rgb), 0.12); --accent-line: rgba(var(--accent-rgb), 0.34);
 
   --text-scale: 1;
   font-size: calc(16px * var(--text-scale));
 }
 
-/* ---------- dark ---------- */
-:root, [data-scheme="dark"] {
-  color-scheme: dark;
-  --bg: #0f0f11;
-  --bg-rgb: 15, 15, 17;
-  --bg-2: #141417;
-  --surface: #1a1a1e;
-  --surface-rgb: 26, 26, 30;
-  --surface-2: #212126;
-  --surface-3: #2b2b31;
-  --line: rgba(255, 255, 255, 0.085);
-  --line-strong: rgba(255, 255, 255, 0.16);
-  --text: #f3eee5;
-  --text-2: #b9b3a8;
-  --text-3: #8d8a83;
-  --scrim: rgba(0, 0, 0, 0.6);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-  --shadow-3: 0 24px 60px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.4);
-  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --pos: #93c7a4; --neg: #e6957f; --warn: #e5bd73; --info: #94b8d0;
-  --pos-soft: rgba(147, 199, 164, 0.14); --neg-soft: rgba(230, 149, 127, 0.14); --warn-soft: rgba(229, 189, 115, 0.14); --info-soft: rgba(148, 184, 208, 0.14);
-}
-[data-scheme="dark"][data-amoled="true"] {
-  --bg: #000000;
-  --bg-rgb: 0, 0, 0;
-  --bg-2: #060607;
-  --surface: #0e0e10;
-  --surface-rgb: 14, 14, 16;
-  --surface-2: #161619;
-  --surface-3: #202024;
-  --line: rgba(255, 255, 255, 0.08);
+/* ---------- light: pure white ---------- */
+:root, [data-scheme="light"] {
+  color-scheme: light;
+  --bg: #ffffff; --bg-rgb: 255, 255, 255; --bg-2: #f5f5f7;
+  --surface: #ffffff; --surface-rgb: 255, 255, 255;
+  --surface-2: #f2f2f6; --surface-3: #e7e7ed;
+  --line: rgba(15, 15, 25, 0.08); --line-strong: rgba(15, 15, 25, 0.16);
+  --text: #0e0e12; --text-2: #484852; --text-3: #6a6a75;
+  --scrim: rgba(10, 10, 16, 0.38);
+  --shadow-1: 0 1px 2px rgba(15, 15, 30, 0.05), 0 0 0 1px rgba(15, 15, 25, 0.04);
+  --shadow-2: 0 8px 28px -8px rgba(15, 15, 30, 0.16), 0 2px 6px rgba(15, 15, 30, 0.05);
+  --shadow-3: 0 28px 70px -12px rgba(15, 15, 30, 0.28), 0 8px 20px rgba(15, 15, 30, 0.08);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --pos: #1a8f4a; --neg: #d1342a; --warn: #a56200; --info: #0a68c4;
+  --pos-soft: rgba(26, 143, 74, 0.11); --neg-soft: rgba(209, 52, 42, 0.1); --warn-soft: rgba(165, 98, 0, 0.11); --info-soft: rgba(10, 104, 196, 0.1);
+  --hover: rgba(15, 15, 25, 0.035);
 }
 
-/* ---------- light ---------- */
-[data-scheme="light"] {
-  color-scheme: light;
-  --bg: #f3f0ea;
-  --bg-rgb: 243, 240, 234;
-  --bg-2: #ebe7df;
-  --surface: #fffefb;
-  --surface-rgb: 255, 254, 251;
-  --surface-2: #f7f4ee;
-  --surface-3: #ece8df;
-  --line: rgba(40, 32, 18, 0.1);
-  --line-strong: rgba(40, 32, 18, 0.2);
-  --text: #1d1b17;
-  --text-2: #55514a;
-  --text-3: #6f6a60;
-  --scrim: rgba(20, 16, 8, 0.4);
-  --shadow-1: 0 1px 2px rgba(60, 45, 20, 0.08);
-  --shadow-2: 0 10px 30px rgba(60, 45, 20, 0.12), 0 2px 6px rgba(60, 45, 20, 0.06);
-  --shadow-3: 0 24px 60px rgba(60, 45, 20, 0.2), 0 6px 16px rgba(60, 45, 20, 0.1);
-  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --pos: #2d7a50; --neg: #b24d3a; --warn: #94650f; --info: #2c6283;
-  --pos-soft: rgba(45, 122, 80, 0.12); --neg-soft: rgba(178, 77, 58, 0.12); --warn-soft: rgba(148, 101, 15, 0.12); --info-soft: rgba(44, 98, 131, 0.12);
+/* ---------- dark: true AMOLED black with stepped elevation ---------- */
+[data-scheme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d10; --bg-rgb: 13, 13, 16; --bg-2: #121216;
+  --surface: #17171b; --surface-rgb: 23, 23, 27;
+  --surface-2: #1f1f24; --surface-3: #2b2b31;
+  --line: rgba(255, 255, 255, 0.09); --line-strong: rgba(255, 255, 255, 0.17);
+  --text: #f6f6f8; --text-2: #b9b9c2; --text-3: #8c8c96;
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 28px 70px rgba(0, 0, 0, 0.7), 0 8px 20px rgba(0, 0, 0, 0.45);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --pos: #3fd070; --neg: #ff6b60; --warn: #ffb340; --info: #66b8ff;
+  --pos-soft: rgba(63, 208, 112, 0.15); --neg-soft: rgba(255, 107, 96, 0.15); --warn-soft: rgba(255, 179, 64, 0.15); --info-soft: rgba(102, 184, 255, 0.15);
+  --hover: rgba(255, 255, 255, 0.04);
+}
+[data-scheme="dark"][data-amoled="true"] {
+  --bg: #000000; --bg-rgb: 0, 0, 0; --bg-2: #050506;
+  --surface: #0f0f12; --surface-rgb: 15, 15, 18;
+  --surface-2: #18181c; --surface-3: #25252a;
+  --line: rgba(255, 255, 255, 0.1);
 }
 
 /* ---------- appearance options ---------- */
-[data-density="compact"] { --d: 0.82; --pad: 14px; }
+[data-density="compact"] { --d: 0.84; --pad: 16px; --gap-section: 22px; }
 [data-text="small"] { --text-scale: 0.94; }
 [data-text="large"] { --text-scale: 1.1; }
-
 @media (min-width: 768px) { :root { --pad: 28px; } }
 @media (min-width: 1100px) { :root { --pad: 40px; } }
 
-/* reduced motion: resolved by JS into data-motion="reduce" */
+/* motion off (Settings, or the OS): resolved by JS into data-motion="reduce" */
 [data-motion="reduce"] { --t-fast: 1ms; --t-med: 1ms; --t-slow: 1ms; }
 
-/* ---------- module identities: each screen tints its glow, bars and highlights ---------- */
-:root { --mod-rgb: var(--accent-rgb); }
-[data-module="habits"], [data-module="discipline"] { --mod-rgb: 147, 199, 164; }
-[data-module="academics"], [data-module="insights"] { --mod-rgb: 148, 184, 208; }
-[data-module="finance"] { --mod-rgb: 222, 190, 112; }
-[data-module="fitness"] { --mod-rgb: 224, 150, 100; }
-[data-module="gaming"] { --mod-rgb: 112, 192, 176; }
-[data-module="learning"] { --mod-rgb: 205, 163, 155; }
-[data-module="journal"] { --mod-rgb: 200, 196, 184; }
-[data-scheme="light"] [data-module="finance"] { --mod-rgb: 176, 134, 40; }
-[data-scheme="light"] [data-module="habits"], [data-scheme="light"] [data-module="discipline"] { --mod-rgb: 62, 140, 96; }
-[data-scheme="light"] [data-module="academics"], [data-scheme="light"] [data-module="insights"] { --mod-rgb: 56, 120, 164; }
-[data-scheme="light"] [data-module="fitness"] { --mod-rgb: 196, 104, 52; }
-[data-scheme="light"] [data-module="gaming"] { --mod-rgb: 36, 140, 124; }
-[data-scheme="light"] [data-module="learning"] { --mod-rgb: 176, 104, 92; }
-
 /* smooth theme switching: colours cross-fade for a moment */
-.theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after { transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, fill 0.4s ease, stroke 0.4s ease, box-shadow 0.4s ease !important; }
+.theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease, box-shadow 0.35s ease !important;
+}
