@@ -60,13 +60,21 @@ export const fmtNum = (n, digits = 0) => num(n).toLocaleString(LOCALE, { maximum
 let currencyCode = 'INR';
 export const setCurrency = code => { currencyCode = code || 'INR'; };
 export function money(amount, { sign = false, compactMode = false } = {}) {
-  const v = num(amount);
+  const v = Math.round(num(amount) * 100) / 100;                         // stored amounts are kept; this only avoids float noise like 0.30000000000000004
+  const frac = Math.abs(v) % 1 !== 0;
   try {
-    const opts = { style: 'currency', currency: currencyCode, maximumFractionDigits: v % 1 !== 0 ? 2 : 0, minimumFractionDigits: v % 1 !== 0 ? 2 : 0 };
-    if (compactMode && Math.abs(v) >= 100000) { opts.notation = 'compact'; opts.maximumFractionDigits = 1; }
+    const opts = { style: 'currency', currency: currencyCode, maximumFractionDigits: frac ? 2 : 0, minimumFractionDigits: frac ? 2 : 0 };
+    if (compactMode && Math.abs(v) >= 1e7) { opts.notation = 'compact'; opts.maximumFractionDigits = 2; opts.minimumFractionDigits = 0; }   // only crore-sized values are shortened
     const out = new Intl.NumberFormat(LOCALE, opts).format(Math.abs(v));
-    return `${v < 0 ? '−' : sign && v > 0 ? '+' : ''}${out}`;
-  } catch { return `${v < 0 ? '−' : ''}${Math.abs(v).toLocaleString(LOCALE)}`; }
+    return `${v < 0 ? '-' : sign && v > 0 ? '+' : ''}${out}`;           // -₹2,028  ₹1,25,000  ₹15,000
+  } catch { return `${v < 0 ? '-' : ''}${Math.abs(v).toLocaleString(LOCALE)}`; }
+}
+/** Grouped number without the currency symbol (Indian grouping), for animated figures. */
+export const groupedNumber = (v, decimals = 0) => new Intl.NumberFormat(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(Math.abs(v));
+/** Money as aligned parts: sign, small symbol and the figure, ready to be animated (see components/countup.js). */
+export function moneyHTML(amount, key, { sign = false, from = null } = {}) {
+  const v = Math.round(num(amount) * 100) / 100, dec = Math.abs(v) % 1 !== 0 ? 2 : 0, neg = v < 0;
+  return `<span class="money">${neg ? '<span class="m-sign">-</span>' : sign && v > 0 ? '<span class="m-sign">+</span>' : ''}<span class="m-sym">${currencySymbol()}</span><span class="m-num" data-anim="${key}" data-type="money" data-dec="${dec}" data-to="${Math.abs(v)}">${groupedNumber(from === null ? Math.abs(v) : from, dec)}</span></span>`;
 }
 export const currencySymbol = () => { try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: currencyCode }).formatToParts(0).find(p => p.type === 'currency')?.value || currencyCode; } catch { return currencyCode; } };
 

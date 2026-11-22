@@ -22,13 +22,17 @@ export const OPTIONS = {
   budgetCategory: ['Food', 'Transport', 'Shopping', 'Education', 'Entertainment', 'Bills', 'Health', 'Other'],
   recurrence: ['None', 'Weekly', 'Monthly', 'Yearly'],
   platform: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch', 'Mobile', 'Other'],
-  gameStatus: ['Playing', 'Backlog', 'Completed', 'On hold', 'Dropped'],
-  bookStatus: ['Reading', 'To read', 'Finished', 'Paused', 'Dropped'],
+  gameStatus: ['Backlog', 'Playing', 'On hold', 'Completed', 'Dropped'],
+  bookStatus: ['To read', 'Reading', 'Paused', 'Finished', 'Dropped'],
   noteKind: ['Note', 'Journal', 'Idea', 'Reflection'],
   goalArea: ['Personal', 'Academics', 'Fitness', 'Finance', 'Learning', 'Other'],
   goalStatus: ['In progress', 'Completed', 'On hold']
 };
 const opt = (label, value) => ({ value, label });
+/** Display labels for stored status values. Stored values never change ('To read' stays 'To read' in your data). */
+export const BOOK_STATUS_LABEL = { 'To read': 'Want to read' };
+export const bookStatusLabel = v => BOOK_STATUS_LABEL[v] || v;
+export const BOOK_STATUS_OPTIONS = ['To read', 'Reading', 'Paused', 'Finished', 'Dropped'].map(v => ({ value: v, label: bookStatusLabel(v) }));
 export const CAT_ICONS = { Food: 'utensils', Transport: 'car', Shopping: 'bag', Education: 'graduation', Entertainment: 'film', Bills: 'receipt', Health: 'heart', Salary: 'briefcase', Gift: 'gift', Other: 'tag' };
 export const PRIORITY_COLORS = { Low: 'var(--info)', Medium: 'var(--warn)', High: 'var(--neg)' };
 export const WEEKDAYS = [{ v: 1, l: 'M', n: 'Monday' }, { v: 2, l: 'T', n: 'Tuesday' }, { v: 3, l: 'W', n: 'Wednesday' }, { v: 4, l: 'T', n: 'Thursday' }, { v: 5, l: 'F', n: 'Friday' }, { v: 6, l: 'S', n: 'Saturday' }, { v: 0, l: 'S', n: 'Sunday' }];
@@ -52,15 +56,15 @@ export const schemas = {
   habit: {
     list: 'habits', label: 'habit', icon: 'repeat', title: r => r.name,
     form: { layout: 'compact', create: 'New habit', submit: 'Create habit' },
-    defaults: () => ({ icon: '✦', target: 1, unit: 'times', schedule: 'Daily', color: HABIT_COLORS[0].hex, days: [1, 2, 3, 4, 5, 6, 0], perWeek: 3 }),
+    defaults: () => ({ iconId: '', target: 1, unit: 'times', schedule: 'Daily', color: HABIT_COLORS[0].hex, days: [1, 2, 3, 4, 5, 6, 0], perWeek: 3 }),
     fields: [
       { name: 'name', label: 'Habit', type: 'text', required: true, placeholder: 'e.g. Read 10 pages', max: 80, cls: 't-big' },
+      { name: 'iconId', label: 'Icon', type: 'iconpicker', kind: 'habit' },
       { name: 'color', label: 'Colour', type: 'colors', options: HABIT_COLORS },
       { name: 'schedule', label: 'Schedule', type: 'select', options: [{ value: 'Daily', label: 'Every day' }, { value: 'Weekdays', label: 'Weekdays (Mon–Fri)' }, { value: 'Weekends', label: 'Weekends' }, { value: '3 days / week', label: 'Flexible: some days each week' }, { value: 'Custom', label: 'Specific days' }] },
       { name: 'days', label: 'Days', type: 'weekdays', when: v => v.schedule === 'Custom', hint: 'Days you do not choose never break the streak.' },
       { name: 'perWeek', label: 'Days per week', type: 'stepper', min: 1, max: 6, step: 1, when: v => v.schedule === '3 days / week', hint: 'Any days count. The streak counts weeks that reach this number.' },
       { name: 'description', label: 'Description', type: 'text', max: 200, placeholder: 'Optional' },
-      { name: 'icon', label: 'Symbol', type: 'text', half: true, max: 4, placeholder: '✦', more: true },
       { name: 'target', label: 'Daily target', type: 'number', min: 1, step: 1, half: true, more: true },
       { name: 'unit', label: 'Unit', type: 'select', options: OPTIONS.habitUnit, half: true, more: true }
     ]
@@ -168,10 +172,11 @@ export const schemas = {
     form: { layout: 'cover', size: 'wide', create: 'Add game', submit: 'Add game' },
     defaults: () => ({ status: 'Playing', platform: 'PC', hours: 0, progress: 0 }),
     fields: [
-      { name: 'cover', label: 'Poster', type: 'cover', ratio: 3 / 4, poster: true, hint: 'Optional. Choose an image from your device; a designed poster is used otherwise.' },
+      { name: 'cover', label: 'Portrait poster', type: 'cover', ratio: 3 / 4, poster: true, hint: 'Used in collections and lists.' },
+      { name: 'banner', label: 'Landscape artwork', type: 'cover', ratio: 16 / 9, landscape: true, maxW: 800, limit: 140000, hint: 'Optional. Used for the featured card and the game page. Without it, the poster is styled automatically.' },
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Game title', max: 100, cls: 't-big' },
       { name: 'platform', label: 'Platform', type: 'select', options: OPTIONS.platform, half: true },
-      { name: 'status', label: 'Status', type: 'select', options: OPTIONS.gameStatus, half: true },
+      { name: 'status', label: 'Status', pickerTitle: 'Change status', type: 'select', options: OPTIONS.gameStatus, half: true },
       { name: 'hours', label: 'Hours played', type: 'number', min: 0, step: 'any', half: true },
       { name: 'estimatedHours', label: 'Estimated total hours', type: 'number', min: 0, step: 'any', half: true, placeholder: 'Optional' },
       { name: 'rating', label: 'Rating (1–10)', type: 'number', min: 1, max: 10, step: 1 },
@@ -187,7 +192,7 @@ export const schemas = {
       { name: 'cover', label: 'Cover', type: 'cover', ratio: 2 / 3, hint: 'Optional. Stored sharp at up to 600 × 900.' },
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Book title', max: 150, cls: 't-big' },
       { name: 'author', label: 'Author', type: 'text', max: 100, placeholder: 'Optional' },
-      { name: 'status', label: 'Status', type: 'select', options: OPTIONS.bookStatus, half: true },
+      { name: 'status', label: 'Status', pickerTitle: 'Change status', type: 'select', options: BOOK_STATUS_OPTIONS, half: true },
       { name: 'rating', label: 'Rating (1–5)', type: 'number', min: 0, max: 5, step: 1, half: true },
       { name: 'currentPage', label: 'Current page', type: 'number', min: 0, step: 1, half: true },
       { name: 'totalPages', label: 'Total pages', type: 'number', min: 0, step: 1, half: true },
@@ -208,9 +213,10 @@ export const schemas = {
   },
   goal: {
     list: 'goals', label: 'goal', icon: 'target', title: r => r.title,
-    defaults: () => ({ area: 'Personal', status: 'In progress', progress: 0, milestones: '' }),
+    defaults: () => ({ iconId: '', area: 'Personal', status: 'In progress', progress: 0, milestones: '' }),
     fields: [
       { name: 'title', label: 'Goal', type: 'text', required: true, placeholder: 'What do you want to achieve?', max: 150 },
+      { name: 'iconId', label: 'Icon', type: 'iconpicker', kind: 'goal' },
       { name: 'area', label: 'Area', type: 'select', options: OPTIONS.goalArea, half: true },
       { name: 'status', label: 'Status', type: 'select', options: OPTIONS.goalStatus, half: true },
       { name: 'targetDate', label: 'Target date', type: 'date' },
@@ -232,9 +238,10 @@ export const schemas = {
   },
   challenge: {
     list: 'challenges', label: 'challenge', icon: 'shield', title: r => r.name,
-    defaults: () => ({ startDate: todayStr(), targetDays: 30 }),
+    defaults: () => ({ iconId: '', startDate: todayStr(), targetDays: 30 }),
     fields: [
       { name: 'name', label: 'Challenge', type: 'text', required: true, placeholder: 'e.g. Read every day', max: 80 },
+      { name: 'iconId', label: 'Icon', type: 'iconpicker', kind: 'challenge' },
       { name: 'startDate', label: 'Start date', type: 'date', required: true, half: true },
       { name: 'targetDays', label: 'Target (days)', type: 'number', min: 1, step: 1, required: true, half: true, presets: [7, 30, 60, 90] },
       { name: 'reward', label: 'Personal reward (optional)', type: 'text', max: 120, placeholder: 'Something to look forward to' }

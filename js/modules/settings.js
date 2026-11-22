@@ -10,7 +10,9 @@ import { storageEstimate } from '../storage/storage.js';
 import { health } from '../core/syncstatus.js';
 import { esc, downloadFile, todayStr, fmtDate, fmtNum, hexToHsl, hslToHex } from '../core/utils.js';
 import { icon, logo } from '../core/icons.js';
-import { pageHead } from '../components/ui.js';
+import { cloudView } from '../core/cloudview.js';
+import { navIcon, NAV_ICON_FAMILIES } from '../core/navicons.js';
+import { pageHead, emptyState } from '../components/ui.js';
 import { selectHTML } from '../components/dropdown.js';
 import { openSheet, confirmDialog } from '../components/modal.js';
 import { toast } from '../components/toast.js';
@@ -23,7 +25,7 @@ const ui = { customOpen: false };
 const STATUS = { off: 'Cloud sync is not connected', connecting: 'Connecting…', idle: 'Up to date', syncing: 'Syncing…', offline: 'Offline. Changes are kept on this device', error: 'Needs attention', conflict: 'Merged changes from another device' };
 function healthBlock() {
   const when = ms => new Date(ms).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-  return `<div class="health"><div class="health-row"><span class="dot is-${esc(health.status)}"></span><b>${esc(STATUS[health.status] || health.status)}</b><a class="link-btn" href="#/cloud">Cloud sync ${icon('chevron-right', { size: 14 })}</a></div>
+  return `<div class="health"><div class="health-row"><span class="dot is-${esc(health.status)}"></span><b>${esc(STATUS[health.status] || health.status)}</b><a class="link-btn" href="#/settings/cloud">Cloud sync ${icon('chevron-right', { size: 14 })}</a></div>
     <dl class="kv"><div><dt>Last successful sync</dt><dd>${health.lastOk ? esc(when(health.lastOk)) : 'Not synced yet'}</dd></div>${health.lastError ? `<div><dt>Last problem</dt><dd>${esc(health.lastError)}<br><span class="t-small">${health.lastErrorAt ? esc(when(health.lastErrorAt)) : ''}</span></dd></div>` : ''}</dl></div>`;
 }
 document.addEventListener('evolve:sync', () => { if (location.hash.startsWith('#/settings')) emit('view:refresh'); });
@@ -37,6 +39,8 @@ const modeCard = ([id, label], current) => {
 };
 const styleCard = ([id, label, sub], current, scheme) => `<button type="button" class="style-card ${current === id ? 'is-on' : ''}" role="radio" aria-checked="${current === id}" data-action="set-style" data-style="${id}"><span class="style-art" data-style="${id}" data-scheme="${scheme}" data-amoled="true"><i class="sa-card"></i><i class="sa-card is-short"></i><i class="sa-btn"></i></span><span class="mode-label">${label}${current === id ? icon('check', { size: 14 }) : ''}</span><small>${sub}</small></button>`;
 const navCard = ([id, label, sub], current, scheme) => `<button type="button" class="nav-card ${current === id ? 'is-on' : ''}" role="radio" aria-checked="${current === id}" data-action="set-nav" data-nav="${id}"><span class="nav-art" data-navstyle="${id}" data-scheme="${scheme}" data-amoled="true"><span class="na-screen"><i></i><i></i></span><span class="na-bar"><b class="on"></b><b></b><b></b><b></b><b></b></span></span><span class="mode-label">${label}${current === id ? icon('check', { size: 14 }) : ''}</span><small>${sub}</small></button>`;
+const ICON_FAMS = [['outline', 'Outline', 'Light 1.75 line'], ['rounded', 'Rounded', 'Heavier, softer line'], ['filled', 'Filled', 'Solid shapes'], ['duotone', 'Duotone', 'Line with a tint']];
+const iconCard = ([id, label, sub], current) => `<button type="button" class="icon-card ${current === id ? 'is-on' : ''}" role="radio" aria-checked="${current === id}" data-action="set-navicons" data-fam="${id}"><span class="ic-art">${['home', 'calendar', 'trending-up', 'layers', 'book'].map(n => navIcon(n, id, 22)).join('')}</span><span class="mode-label">${label}${current === id ? icon('check', { size: 14 }) : ''}</span><small>${sub}</small></button>`;
 const subLink = (href, ico, title, sub) => `<a class="row set-link" href="${href}"><span class="row-lead">${icon(ico, { size: 19 })}</span><span class="row-main"><span class="row-title">${esc(title)}</span><span class="row-sub trunc">${esc(sub)}</span></span>${icon('chevron-right', { size: 18 })}</a>`;
 const back = '';
 
@@ -50,9 +54,9 @@ function pageLanding(s) {
       ${subLink('#/settings/preferences', 'sliders', 'Preferences', `${st.currency} · week starts ${st.weekStartsMonday ? 'Monday' : 'Sunday'}`)}</div></section>
     <section class="card card-flush" style="--i:2"><div class="list">
       ${subLink('#/settings/data', 'database', 'Data and backup', 'Export, import and restore')}
-      ${subLink('#/cloud', 'cloud', 'Cloud sync', STATUS[health.status] || health.status)}
+      ${subLink('#/settings/cloud', 'cloud', 'Cloud sync', STATUS[health.status] || health.status)}
       ${subLink('#/settings/trash', 'trash', 'Recently deleted', s.trashBin.length ? `${s.trashBin.length} kept for 30 days` : 'Nothing deleted recently')}</div></section>
-    <section class="card card-flush" style="--i:3"><div class="list">${subLink('#/settings/about', 'info', 'About Evolve', `Version 9.0.0 · data format ${SCHEMA_VERSION}`)}</div></section>
+    <section class="card card-flush" style="--i:3"><div class="list">${subLink('#/settings/about', 'info', 'About Evolve', `Version 9.1.0 · data format ${SCHEMA_VERSION}`)}</div></section>
     <p class="t-small faint" style="text-align:center">Search is Ctrl / ⌘ K. Your data stays on this device unless you turn on cloud sync.</p></div>`;
 }
 
@@ -87,7 +91,9 @@ function pageNavigation(s) {
   const st = s.settings, scheme = document.documentElement.dataset.scheme || 'dark';
   return `${pageHead({ title: 'Navigation', sub: 'Choose how the bottom bar looks' })}<div class="stack-lg">
     <section class="card card-pad set-card" style="--i:1"><div class="nav-grid" role="radiogroup" aria-label="Bottom navigation style">${NAVS.map(x => navCard(x, st.navStyle, scheme)).join('')}</div>
-      <p class="field-hint mt-4">The selected style is applied immediately, saved on this device and restored when you reopen Evolve. Today, Planner, Growth, Life and Library stay in every style; on wide screens a sidebar replaces the bottom bar.</p></section></div>`;
+      <p class="field-hint mt-4">The selected style is applied immediately, saved on this device and restored when you reopen Evolve. Today, Planner, Growth, Life and Library stay in every style; on wide screens a sidebar replaces the bottom bar.</p></section>
+    <section class="card card-pad set-card" style="--i:2"><p class="set-sub">Icon style</p><div class="icon-grid" role="radiogroup" aria-label="Navigation icon style">${ICON_FAMS.map(x => iconCard(x, st.navIcons || 'outline')).join('')}</div>
+      <p class="field-hint mt-4">Works with every navigation style. Applies to the bottom bar and the sidebar.</p></section></div>`;
 }
 
 function pagePreferences(s) {
@@ -119,13 +125,17 @@ function pageTrash(s) {
 function pageAbout(s) {
   const kb = Math.round(storageEstimate().bytes / 1024), sum = summarize(s);
   return `${pageHead({ title: 'About' })}<div class="stack-lg"><section class="card card-pad set-card about" style="--i:1"><div class="about-mark">${logo(44)}<div><b>Evolve</b><small>Personal life management</small></div></div>
-    <dl class="kv"><div><dt>Version</dt><dd>9.0.0 (data format ${SCHEMA_VERSION})</dd></div><div><dt>Stored data</dt><dd>${fmtNum(kb)} KB in this browser</dd></div><div><dt>Records</dt><dd>${esc(Object.entries(sum).filter(([, n]) => n).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None yet')}</dd></div>${s.createdAt ? `<div><dt>Workspace created</dt><dd>${esc(fmtDate(s.createdAt.slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' }))}</dd></div>` : ''}</dl>
+    <dl class="kv"><div><dt>Version</dt><dd>9.1.0 (data format ${SCHEMA_VERSION})</dd></div><div><dt>Stored data</dt><dd>${fmtNum(kb)} KB in this browser</dd></div><div><dt>Records</dt><dd>${esc(Object.entries(sum).filter(([, n]) => n).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None yet')}</dd></div>${s.createdAt ? `<div><dt>Workspace created</dt><dd>${esc(fmtDate(s.createdAt.slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' }))}</dd></div>` : ''}</dl>
     <p class="t-small mt-3">Earlier data is never modified when Evolve upgrades it; a copy is migrated.</p></section></div>`;
+}
+
+function pageCloud() {
+  return cloudView.render ? cloudView.render() : `${pageHead({ title: 'Cloud sync' })}<div class="card" style="--i:1">${emptyState({ icon: 'cloud', title: 'Connecting to cloud sync', text: 'This starts a moment after Evolve opens. If it does not appear, check your connection and reload.' })}</div>`;
 }
 
 function render(parts = []) {
   const s = State.get();
-  return { appearance: pageAppearance, navigation: pageNavigation, preferences: pagePreferences, data: pageData, trash: pageTrash, about: pageAbout }[parts[0]]?.(s) || pageLanding(s);
+  return { appearance: pageAppearance, navigation: pageNavigation, preferences: pagePreferences, data: pageData, trash: pageTrash, about: pageAbout, cloud: pageCloud }[parts[0]]?.(s) || pageLanding(s);
 }
 
 /* ---------------- actions ---------------- */
@@ -149,6 +159,7 @@ registerActions({
   },
   'set-mode'(el) { setSetting({ theme: el.dataset.mode }); emit('view:refresh'); },
   'set-style'(el) { setSetting({ style: el.dataset.style }); emit('view:refresh'); },
+  'set-navicons'(el) { if (NAV_ICON_FAMILIES.includes(el.dataset.fam)) { setSetting({ navIcons: el.dataset.fam }); emit('view:refresh'); } },
   'set-nav'(el) { setSetting({ navStyle: el.dataset.nav }); emit('view:refresh'); toast(`${el.dataset.nav[0].toUpperCase()}${el.dataset.nav.slice(1)} navigation`); },
   'custom-toggle'() {
     ui.customOpen = !ui.customOpen;
@@ -157,7 +168,7 @@ registerActions({
     emit('view:refresh');
   },
   'set-accent'(el) { setSetting({ accent: el.dataset.id, customAccent: '' }); emit('view:refresh'); },
-  'reset-appearance'() { const d = freshSettings(); setSetting({ theme: d.theme, amoled: d.amoled, accent: d.accent, customAccent: '', style: d.style, navStyle: d.navStyle, glass: d.glass, density: d.density, textSize: d.textSize, motion: d.motion }); emit('view:refresh'); toast('Appearance restored'); },
+  'reset-appearance'() { const d = freshSettings(); setSetting({ theme: d.theme, amoled: d.amoled, accent: d.accent, customAccent: '', style: d.style, navStyle: d.navStyle, navIcons: d.navIcons, glass: d.glass, density: d.density, textSize: d.textSize, motion: d.motion }); emit('view:refresh'); toast('Appearance restored'); },
   'export-backup'() { exportBackupFile(State.get()); toast('Backup downloaded'); },
   'export-csv'() {
     const tx = State.get().transactions.slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -213,5 +224,5 @@ registerInput({
   }
 });
 
-const TITLES = { appearance: 'Appearance', navigation: 'Navigation', preferences: 'Preferences', data: 'Data and backup', trash: 'Recently deleted', about: 'About' };
+const TITLES = { cloud: 'Cloud sync', appearance: 'Appearance', navigation: 'Navigation', preferences: 'Preferences', data: 'Data and backup', trash: 'Recently deleted', about: 'About' };
 export const route = { id: 'settings', render, title: parts => TITLES[parts[0]] || 'Settings' };

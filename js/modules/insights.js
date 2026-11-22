@@ -1,6 +1,7 @@
 /* Insights: summaries computed only from recorded data, over a chosen range.
  * A section with too little data says what is needed instead of drawing an empty or misleading chart. */
 import * as State from '../core/state.js';
+import { itemIcon } from '../core/itemicons.js';
 import { registerActions, emit } from '../core/events.js';
 import { fmtDM, esc, todayStr, addDays, rangeDates, fmtDate, fmtNum, money, num, sum, pct, plural, weekdayInitial, parseDate, dateStr } from '../core/utils.js';
 import { isScheduled, habitDone, completedOn, entryVolume, academicOverview, bookProgress } from '../core/stats.js';
@@ -37,7 +38,7 @@ function render() {
     const done = dd.filter(d => habitDone(s, h.id, d)).length;
     return { h, scheduled: dd.length, done, rate: pct(done, dd.length) };
   }).filter(r => r.scheduled >= 3);
-  const habitsCard = card('Habit consistency', 'Share of scheduled days you checked in', habitRows.length ? `<div class="stack mt-3" style="gap:14px">${habitRows.sort((a, b) => b.rate - a.rate).map(r => `<div><div class="between"><span class="row-title">${esc(r.h.icon || '✦')} ${esc(r.h.name)}</span><span class="t-small t-num">${r.done}/${r.scheduled} · ${Math.round(r.rate)}%</span></div><div class="mt-2">${progressBar(r.rate)}</div></div>`).join('')}</div>` : need('Add a habit and check in for a few days to see consistency here.'), 4);
+  const habitsCard = card('Habit consistency', 'Share of scheduled days you checked in', habitRows.length ? `<div class="stack mt-3" style="gap:14px">${habitRows.sort((a, b) => b.rate - a.rate).map(r => `<div><div class="between"><span class="row-title ico-title"><span class="mini-ico" style="--hc:${esc(r.h.color || 'var(--accent)')}">${itemIcon(r.h, 'habit', 15)}</span>${esc(r.h.name)}</span><span class="t-small t-num">${r.done}/${r.scheduled} · ${Math.round(r.rate)}%</span></div><div class="mt-2">${progressBar(r.rate)}</div></div>`).join('')}</div>` : need('Add a habit and check in for a few days to see consistency here.'), 4);
 
   /* ----- academics (current state, not range-based) ----- */
   const ov = academicOverview(s);

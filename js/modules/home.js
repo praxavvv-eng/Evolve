@@ -2,12 +2,14 @@
  * progress, quick actions, focus tasks, habits, schedule, a few real snapshots, deadlines and recent activity.
  * Nothing is invented: every number comes from recorded data, and a section with no data does not appear. */
 import * as State from '../core/state.js';
+import { itemIcon } from '../core/itemicons.js';
 import { num, esc, todayStr, fmtLong, greeting, addDays, relDay, plural, fmtTime, money, monthKey, fmtDate, isDateStr } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { habitsDueOn, habitDone, todaysTasks, academicOverview, habitStreakInfo, monthTotals, bookProgress, gameProgress, budgetSpent } from '../core/stats.js';
 import { ring } from '../components/charts.js';
 import { addBtn, emptyState } from '../components/ui.js';
 import { taskRow } from './tasks.js';
+import { shown, run } from '../components/countup.js';
 
 const MAX_TASKS = 4;
 const streakText = (s, h) => { const i = habitStreakInfo(s, h); return i.value ? `${i.value} ${i.unit}${i.value === 1 ? '' : 's'} streak` : 'Start a streak'; };
@@ -36,6 +38,16 @@ function snapshots(s, today) {
   return tiles.slice(0, 4);
 }
 
+/* Hero ring: the stroke length and the number are tweened by components/countup.js only when the value changes. */
+function heroRing(percent, done, total) {
+  const size = 104, stroke = 10, r = (size - stroke) / 2, c = 2 * Math.PI * r, p = (total ? shown('h-ring') : 0) / 100;
+  return `<div class="ring hero-ring no-enter" style="--size:${size}px" role="img" aria-label="${done} of ${total} done today">
+    <svg viewBox="0 0 ${size} ${size}"><circle class="ring-bg" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"/><circle class="ring-fg" data-anim="h-ring" data-type="ring" data-to="${total ? percent.toFixed(2) : 0}" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="--c:${c.toFixed(2)};--p:${p.toFixed(4)}"/></svg>
+    <div class="ring-label"><b><span data-anim="h-pct" data-type="count" data-to="${total ? Math.round(percent) : 0}">${total ? Math.round(shown('h-pct')) : 0}</span>${total ? '<i>%</i>' : ''}</b><small>${total ? 'today' : ''}</small></div></div>`;
+}
+const heroRow = (ico, label, key, done, total) => `<div class="hero-row"><span class="hr-ico">${icon(ico, { size: 15 })}</span><span class="hr-lab">${label}</span><span class="hr-num t-num"><span data-anim="${key}-n" data-type="count" data-to="${done}">${Math.round(shown(`${key}-n`))}</span><i>/${total}</i></span><div class="bar hr-bar"><span data-anim="${key}-b" data-type="bar" data-to="${total ? (done / total) * 100 : 0}" style="--w:${shown(`${key}-b`).toFixed(1)}%"></span></div></div>`;
+const qa = (type, label, ico, prefill) => `<button type="button" class="qa-tile" data-action="form" data-type="${type}" ${prefill ? `data-prefill='${esc(JSON.stringify(prefill))}'` : ''}><span class="qa-ico">${icon(ico, { size: 20 })}</span><span>${label}</span></button>`;
+
 function render() {
   const s = State.get(), today = todayStr();
   const tasks = todaysTasks(s), tasksDone = tasks.filter(t => t.done).length;
@@ -56,16 +68,16 @@ function render() {
   return `<header class="page-head home-head" style="--i:0"><div><p class="eyebrow">${esc(fmtLong())}</p><h1 class="t-hero">${esc(greeting())}</h1></div></header>
     <div class="stack-lg">
       ${empty ? `<section class="card" style="--i:1">${emptyState({ icon: 'sparkles', title: 'A clean start', text: 'Begin with whatever matters most today. Everything you add stays on this device and syncs only if you turn on cloud sync.', action: `<div class="row-gap" style="justify-content:center">${addBtn('task', 'Add a task')}${addBtn('habit', 'Add a habit', { cls: 'btn btn-sm' })}</div>` })}</section>` : `
-      <section class="card home-hero" style="--i:1"><div class="hero-top">${ring({ value: percent, size: 92, stroke: 9, label: total ? `${Math.round(percent)}%` : '–', title: `${done} of ${total} done today` })}
+      <section class="card home-hero" style="--i:1" data-bump><div class="hero-top">${heroRing(percent, done, total)}
         <div class="hero-copy"><p class="hero-sum">${esc(summary)}</p>
-          ${total ? `<div class="hero-pills"><span class="pill">${icon('check-square', { size: 14 })}${tasksDone}/${tasks.length} tasks</span><span class="pill">${icon('repeat', { size: 14 })}${habitsDone}/${due.length} habits</span></div>` : '<p class="t-small">Add a task or habit to begin.</p>'}</div></div></section>
-      <div class="qa-row hscroll" style="--i:2" aria-label="Quick actions">${addBtn('task', 'Task', { cls: 'qa-chip' })}${addBtn('transaction', 'Expense', { cls: 'qa-chip', prefill: { type: 'expense' } })}${addBtn('workout', 'Workout', { cls: 'qa-chip' })}${addBtn('note', 'Note', { cls: 'qa-chip' })}${addBtn('habit', 'Habit', { cls: 'qa-chip' })}</div>
+          ${total ? `<div class="hero-rows">${heroRow('check-square', 'Tasks', 'h-tasks', tasksDone, tasks.length)}${heroRow('repeat', 'Habits', 'h-habits', habitsDone, due.length)}</div>` : '<p class="t-small">Add a task or habit to begin.</p>'}</div></div></section>
+      <div class="qa-grid" style="--i:2" role="group" aria-label="Quick actions">${qa('task', 'Task', 'check-square')}${qa('transaction', 'Expense', 'wallet', { type: 'expense' })}${qa('workout', 'Workout', 'dumbbell')}${qa('note', 'Note', 'notebook')}</div>
 
       <section style="--i:3"><div class="sec-head tight"><h2>Focus</h2><a class="link-btn" href="#/plan">All tasks ${icon('chevron-right', { size: 14 })}</a></div>
         ${tasks.length ? `<div class="card card-flush"><div class="list">${[...open.slice(0, MAX_TASKS), ...tasks.filter(t => t.done).slice(0, Math.max(0, MAX_TASKS - open.length))].map(t => taskRow(t, { compact: true })).join('')}</div>${open.length > MAX_TASKS ? `<a class="more-line" href="#/plan">+${open.length - MAX_TASKS} more</a>` : ''}</div>` : `<div class="card card-pad inline-empty"><span>Nothing due today.</span>${addBtn('task', 'Add task', { cls: 'link-btn' })}</div>`}</section>
 
       ${due.length ? `<section style="--i:4"><div class="sec-head tight"><h2>Habits</h2><a class="link-btn" href="#/habits">Open ${icon('chevron-right', { size: 14 })}</a></div>
-        <div class="habit-tiles hscroll">${due.map(h => { const on = habitDone(s, h.id, today); return `<button type="button" class="habit-tile ${on ? 'is-on' : ''}" style="--hc:${esc(h.color || '#5cc28a')}" data-action="habit-toggle" data-id="${esc(h.id)}" data-date="${today}" aria-pressed="${on}"><span class="ht-top"><span class="ht-ico">${esc(h.icon || '✦')}</span><span class="ht-check">${icon('check', { size: 14 })}</span></span><b class="trunc">${esc(h.name)}</b><small class="trunc">${esc(streakText(s, h))}</small></button>`; }).join('')}</div></section>` : ''}
+        <div class="habit-tiles hscroll">${due.map(h => { const on = habitDone(s, h.id, today); return `<button type="button" class="habit-tile ${on ? 'is-on' : ''}" style="--hc:${esc(h.color || '#5cc28a')}" data-action="habit-toggle" data-id="${esc(h.id)}" data-date="${today}" aria-pressed="${on}"><span class="ht-top"><span class="ht-ico">${itemIcon(h, 'habit', 19)}</span><span class="ht-check">${icon('check', { size: 14 })}</span></span><b class="trunc">${esc(h.name)}</b><small class="trunc">${esc(streakText(s, h))}</small></button>`; }).join('')}</div></section>` : ''}
 
       ${schedule.length ? `<section style="--i:5"><div class="sec-head tight"><h2>Schedule</h2><a class="link-btn" href="#/calendar">Calendar ${icon('chevron-right', { size: 14 })}</a></div>
         <div class="card card-flush"><div class="list">${schedule.map(i => `<a class="row sched-row ${i.time < nowT ? 'is-past' : ''}" href="#/calendar"><span class="sched-time t-num">${esc(fmtTime(i.time))}</span><span class="row-main"><span class="row-title trunc">${esc(i.title)}</span><span class="row-sub">${esc(i.sub)}</span></span></a>`).join('')}</div></div></section>` : ''}
@@ -80,4 +92,4 @@ function render() {
     </div>`;
 }
 
-export const route = { id: 'home', render };
+export const route = { id: 'home', render, mount: view => run(view) };

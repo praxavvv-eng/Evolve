@@ -5,6 +5,7 @@ import { initDelegation, registerActions, on } from './core/events.js';
 import { initAppearance } from './core/appearance.js';
 import { checkProgress } from './core/xp.js';
 import { icon, logo } from './core/icons.js';
+import { navIcon } from './core/navicons.js';
 import { esc, $, downloadFile, todayStr } from './core/utils.js';
 import { HUBS, MORE, navById, hubOf } from './nav.js';
 import * as Router from './router.js';
@@ -37,10 +38,11 @@ import { route as library } from './modules/library.js';
 /* ---------------- chrome: sidebar, tab bar, top bar ---------------- */
 const lastIn = JSON.parse(sessionStorage.getItem('evolve_last_in_hub') || '{}');   // remembers the last screen used inside each destination
 
+const fam = () => State.get().settings.navIcons || 'outline';
 function buildSidebar() {
   const sb = $('#sidebar');
-  const link = (n, cls = 'sb-item') => `<a class="${cls}" href="#/${n.id}" data-nav="${n.id}" title="${esc(n.label)}"><span class="i-wrap">${icon(n.icon, { size: 20 })}</span><span>${esc(n.label)}</span></a>`;
-  const hub = h => `<div class="sb-hub" data-hub="${h.id}"><a class="sb-item" href="#/${h.route}" data-hubnav="${h.id}" title="${esc(h.label)}"><span class="i-wrap">${icon(h.icon, { size: 20 })}</span><span>${esc(h.label)}</span></a>
+  const link = (n, cls = 'sb-item') => `<a class="${cls}" href="#/${n.id}" data-nav="${n.id}" title="${esc(n.label)}"><span class="i-wrap">${navIcon(n.icon, fam(), 20)}</span><span>${esc(n.label)}</span></a>`;
+  const hub = h => `<div class="sb-hub" data-hub="${h.id}"><a class="sb-item" href="#/${h.route}" data-hubnav="${h.id}" title="${esc(h.label)}"><span class="i-wrap">${navIcon(h.icon, fam(), 20)}</span><span>${esc(h.label)}</span></a>
     ${h.items.filter(x => x !== 'library').length > 1 ? `<div class="sb-children">${h.items.filter(x => x !== 'library').map(x => navById(x)).map(n => link(n, 'sb-sub')).join('')}</div>` : ''}</div>`;
   sb.innerHTML = `
     <div class="sb-brand"><span class="sb-logo">${logo(30)}</span><b class="sb-word">Evolve</b><span class="spacer"></span>
@@ -50,8 +52,16 @@ function buildSidebar() {
 }
 
 function buildTabbar() {
-  const tab = h => `<a class="tab" href="#/${h.route}" data-tab="${h.id}"><span class="tab-ico">${icon(h.icon, { size: 24 })}</span><span class="tab-lab">${esc(h.label)}</span></a>`;
-  $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd" aria-hidden="true"></span>${HUBS.map(tab).join('')}`;
+  const tab = h => `<a class="tab" href="#/${h.route}" data-tab="${h.id}"><span class="tab-ico">${navIcon(h.icon, fam(), 24)}</span><span class="tab-lab">${esc(h.label)}</span></a>`;
+  $('#tabbar').dataset.icons = fam(); $('#tabbar').innerHTML = `<span class="tab-indicator" id="tabInd" aria-hidden="true"></span>${HUBS.map(tab).join('')}`;
+}
+
+/** Reserve exactly the space the bar covers (measured, so safe areas and floating bars can never hide content). */
+function reserveNavSpace() {
+  const bar = $('#tabbar'), root = document.documentElement;
+  if (!bar || !bar.offsetHeight || getComputedStyle(bar).display === 'none') { root.style.removeProperty('--nav-space'); return; }
+  const r = bar.getBoundingClientRect();
+  root.style.setProperty('--nav-space', `${Math.ceil(window.innerHeight - r.top + 28)}px`);
 }
 
 function moveIndicator() {
@@ -142,7 +152,7 @@ registerActions({
       'sep',
       { label: 'Appearance', icon: 'palette', onClick: go('#/settings/appearance') },
       { label: 'Navigation style', icon: 'dock', onClick: go('#/settings/navigation') },
-      { label: 'Cloud sync', icon: 'cloud', onClick: go('#/cloud') },
+      { label: 'Cloud sync', icon: 'cloud', onClick: go('#/settings/cloud') },
       { label: 'Settings', icon: 'sliders', onClick: go('#/settings') }
     ]);
   },
@@ -188,8 +198,14 @@ function boot() {
 
   Router.start($('#view'), { onRoute: updateChrome });
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', moveIndicator);
-  document.addEventListener('evolve:settings', () => requestAnimationFrame(moveIndicator));
+  window.addEventListener('resize', () => { moveIndicator(); reserveNavSpace(); });
+  new ResizeObserver(reserveNavSpace).observe($('#tabbar'));
+  requestAnimationFrame(reserveNavSpace);
+  document.addEventListener('evolve:settings', () => {
+    const f = fam(), bar = document.getElementById('tabbar');
+    if (bar && bar.dataset.icons !== f) { buildSidebar(); buildTabbar(); bar.dataset.icons = f; Router.rerender(); }   // switch icon family without a reload
+    requestAnimationFrame(() => { moveIndicator(); reserveNavSpace(); });
+  });
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
   });

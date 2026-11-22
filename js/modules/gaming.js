@@ -24,6 +24,14 @@ export function cover(g, cls = '') {
   return `<div class="cover ${cls}" style="--c1:${a};--c2:${b}"><span class="cover-initials" aria-hidden="true">${esc(initials(g.title))}</span>${art}</div>`;
 }
 
+/** Landscape artwork for featured areas. Uses the landscape image when there is one. Otherwise the poster is shown undistorted
+ *  over a blurred, darkened copy of itself, or a designed gradient when there is no image at all. */
+export function heroArt(g) {
+  if (g.banner) return `<div class="hero-art has-banner"><img class="ha-img" src="${esc(g.banner)}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></div>`;
+  if (g.cover) return `<div class="hero-art is-fallback"><img class="ha-blur" src="${esc(g.cover)}" alt="" decoding="async" onerror="this.remove()"><img class="ha-poster" src="${esc(g.cover)}" alt="" decoding="async" onerror="this.remove()"></div>`;
+  return `<div class="hero-art">${cover(g)}</div>`;
+}
+
 const stars = r => (num(r) ? `<span class="rate">${icon('star', { size: 13 })}<b>${num(r)}</b><small>/10</small></span>` : '');
 
 function card(g) {
@@ -35,7 +43,7 @@ function card(g) {
 /** Full-width cinematic banner for the game being played right now. */
 function hero(g) {
   const p = gameProgress(g);
-  return `<article class="game-hero"><div class="gh-art">${cover(g)}</div><div class="gh-shade"></div>
+  return `<article class="game-hero"><div class="gh-art">${heroArt(g)}</div><div class="gh-shade"></div>
     <a class="gh-link" href="#/gaming/${esc(g.id)}" aria-label="Open ${esc(g.title)}"></a>
     <div class="gh-body"><span class="badge badge-accent">Now playing</span><h2>${esc(g.title)}</h2><p>${esc(g.platform)} · ${fmtNum(g.hours, 1)} h played${num(g.estimatedHours) > 0 ? ` of about ${fmtNum(g.estimatedHours, 1)} h` : ''}</p>
       ${p.value !== null ? `<div class="gh-prog">${progressBar(p.value)}<b class="t-num">${Math.round(p.value)}%</b></div>` : ''}
@@ -61,7 +69,8 @@ function renderList() {
       ${posterShelf('Recently played', '', recentlyPlayed)}
       ${posterShelf('Backlog', plural(backlog.length, 'game'), backlog)}
       ${posterShelf('Completed', plural(done.length, 'game'), done)}
-      ${posterShelf('On hold', '', games.filter(g => g.status === 'On hold' || g.status === 'Dropped').sort(recent))}`;
+      ${posterShelf('On hold', '', games.filter(g => g.status === 'On hold').sort(recent))}
+      ${posterShelf('Dropped', '', games.filter(g => g.status === 'Dropped').sort(recent))}`;
   } else {
     let list = games.filter(g => g.status === ui.status);
     const cmp = { recent, title: (a, b) => a.title.localeCompare(b.title), hours: (a, b) => num(b.hours) - num(a.hours), rating: (a, b) => num(b.rating) - num(a.rating) }[ui.sort] || recent;
@@ -88,11 +97,11 @@ function renderDetail(id) {
   if (!g) return `<div class="card">${emptyState({ icon: 'gamepad', title: 'Game not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/gaming">Back to library</a>' })}</div>`;
   const hist = (g.history || []).slice().reverse();
   const facts = [['Platform', g.platform], ['Playtime', `${fmtNum(g.hours, 1)} h`], ...(num(g.estimatedHours) > 0 ? [['Estimated total', `${fmtNum(g.estimatedHours, 1)} h`]] : []), ['Rating', num(g.rating) ? `${num(g.rating)} / 10` : 'Not rated'], ['Started', g.startedAt ? fmtDate(g.startedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'], ['Finished', g.finishedAt ? fmtDate(g.finishedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : '—']];
-  return `<div class="game-detail"><div class="gd-cover" style="--i:0">${cover(g)}</div>
+  return `<div class="gd-banner" style="--i:0">${heroArt(g)}<span class="gd-shade"></span></div>
+  <div class="game-detail"><div class="gd-cover" style="--i:0">${cover(g)}</div>
     <div class="gd-main stack-lg"><header style="--i:1"><div class="row-gap">${badge(g.status, STATUS_KIND[g.status])}${stars(g.rating)}</div><h1 class="t-title mt-2">${esc(g.title)}</h1><p class="t-body">${esc(g.platform)}</p></header>
       <section class="card card-pad stack" style="--i:2"><div class="between"><span class="field-label">Status</span>${selectHTML({ value: g.status, options: OPTIONS.gameStatus, label: 'Change status', compact: true, dataChange: 'game-status', extra: `data-id="${esc(g.id)}"` })}</div>
         ${progressBlock(g)}
-        ${g.status !== 'Completed' ? `<div class="log-time"><span class="field-label">Log playtime</span><div class="row-gap"><button class="btn btn-sm" type="button" data-action="game-time" data-id="${esc(g.id)}" data-h="0.5">+30 min</button><button class="btn btn-sm" type="button" data-action="game-time" data-id="${esc(g.id)}" data-h="1">+1 h</button><button class="btn btn-sm" type="button" data-action="game-time" data-id="${esc(g.id)}" data-h="2">+2 h</button></div></div>` : ''}
         <div class="between"><span class="field-label">Playtime</span><div class="row-gap"><b class="t-num">${fmtNum(g.hours, 1)} h</b><button class="btn btn-sm btn-ghost" type="button" data-action="form" data-type="game" data-id="${esc(g.id)}" aria-label="Edit logged hours">${icon('edit', { size: 14 })}</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="0.5">+30 min</button><button class="btn btn-sm" type="button" data-action="game-hours" data-id="${esc(g.id)}" data-add="1">+1 h</button></div></div></section>
       <section class="card card-pad" style="--i:3"><dl class="kv">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>
       ${g.notes ? `<section class="card card-pad" style="--i:4"><h2 class="t-h2">Notes</h2><p class="t-body mt-2" style="white-space:pre-wrap">${esc(g.notes)}</p></section>` : ''}

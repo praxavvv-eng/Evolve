@@ -1,6 +1,7 @@
 /* Fitness: overview, history, exercise library + detail, plans (templates) with a session logger, and body measurements.
  * Workout performance and body measurements are separate on purpose: lifting numbers never imply body change. */
 import * as State from '../core/state.js';
+import { dateFieldHTML } from '../components/datepicker.js';
 import { registerActions, emit } from '../core/events.js';
 import { saveRecord, find } from '../core/records.js';
 import { fmtDM, esc, todayStr, addDays, parseDate, dateStr, fmtDate, fmtNum, num, sum, groupBy, plural, monthKey, addMonths, weekdayInitial, rangeDates, relDay } from '../core/utils.js';
@@ -100,10 +101,10 @@ function openSession(id) {
       <div class="sess-in"><label><span class="sr-only">Sets</span><input type="number" inputmode="numeric" min="0" placeholder="Sets" value="${last ? num(last.sets) : 3}" data-f="sets" aria-label="${esc(name)} sets"></label><label><span class="sr-only">Reps</span><input type="number" inputmode="numeric" min="0" placeholder="Reps" value="${last ? num(last.reps) : 10}" data-f="reps" aria-label="${esc(name)} reps"></label><label><span class="sr-only">Weight</span><input type="number" inputmode="decimal" min="0" step="any" placeholder="kg" value="${last && num(last.weight) ? num(last.weight) : ''}" data-f="weight" aria-label="${esc(name)} weight in kilograms"></label></div>
       <button type="button" class="icon-btn" data-skip aria-label="Skip ${esc(name)}">${icon('x', { size: 16 })}</button></div>`;
   }).join('');
-  const api = openSheet({ title: t.name, subtitle: 'Adjust the numbers, skip what you did not do', size: 'wide', body: `<div class="field" style="margin-bottom:14px"><label for="sess-date">Date</label><input id="sess-date" type="date" value="${todayStr()}"></div><div class="sess-head"><span>Exercise</span><span>Sets · Reps · kg</span></div>${rows}`, footer: '<button class="btn btn-ghost" type="button" data-sheet-close>Cancel</button><button class="btn btn-primary" type="button" data-save>Save session</button>' });
+  const api = openSheet({ title: t.name, subtitle: 'Adjust the numbers, skip what you did not do', size: 'wide', body: `<div class="field" style="margin-bottom:14px"><label for="sess-date">Date</label>${dateFieldHTML({ id: 'sess-date', name: 'sess-date', value: todayStr() })}</div><div class="sess-head"><span>Exercise</span><span>Sets · Reps · kg</span></div>${rows}`, footer: '<button class="btn btn-ghost" type="button" data-sheet-close>Cancel</button><button class="btn btn-primary" type="button" data-save>Save session</button>' });
   api.el.addEventListener('click', e => { const b = e.target.closest('[data-skip]'); if (b) b.closest('.sess-row').classList.toggle('is-skipped'); });
   api.el.querySelector('[data-save]').addEventListener('click', () => {
-    const date = api.el.querySelector('#sess-date').value; let saved = 0, xp = 0, failed = '';
+    const date = api.el.querySelector('#sess-date-v').value; let saved = 0, xp = 0, failed = '';
     api.el.querySelectorAll('.sess-row:not(.is-skipped)').forEach(r => {
       const v = f => r.querySelector(`[data-f="${f}"]`).value;
       if (!(num(v('sets')) > 0 && num(v('reps')) > 0)) return;

@@ -18,8 +18,6 @@
 
 /* consistency overview */
 .overview .hm-scroll { margin-inline: 0; padding-inline: 0; }
-.hm.ov { --cs: 13px; }
-.hm.ov .hm-grid { grid-template-columns: repeat(var(--wk), 1fr); }
 .ov-0, .hm-cell.ov-0 { background: var(--surface-3); }
 .ov-1, .hm-cell.ov-1 { background: color-mix(in srgb, var(--accent) 28%, var(--surface-3)); }
 .ov-2, .hm-cell.ov-2 { background: color-mix(in srgb, var(--accent) 52%, var(--surface-3)); }
@@ -30,22 +28,19 @@
 .ov-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 .ov-legend span:first-child { margin-right: 4px; } .ov-legend span:last-child { margin-left: 4px; }
 
-/* contribution graph */
-.hm-wrap { display: flex; gap: 8px; align-items: flex-start; }
-.hm-wd { display: grid; grid-template-rows: repeat(7, 15px); gap: 4px; padding-top: 20px; font-size: 0.62rem; font-weight: 600; color: var(--text-3); flex: none; width: 24px; }
-.hm-wd span { line-height: 15px; }
-.hm-scroll { overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; flex: 1; min-width: 0; }
+/* contribution graph: one grid; weekday labels, month labels and cells share the same tracks */
+.hm-scroll { overflow-x: auto; scrollbar-width: none; position: relative; --fade-l: 0px; --fade-r: 0px; -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent); mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent); }
 .hm-scroll::-webkit-scrollbar { display: none; }
-.hm { display: inline-flex; flex-direction: column; gap: 6px; min-width: min-content; }
-.hm-months { display: grid; grid-template-columns: repeat(var(--wk, 53), 15px); gap: 4px; font-size: 0.66rem; font-weight: 600; color: var(--text-3); height: 14px; }
-.hm-months span { white-space: nowrap; overflow: visible; }
-.hm-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(var(--wk, 53), 15px); gap: 4px; }
-.hm-col { display: grid; grid-template-rows: repeat(7, 15px); gap: 4px; }
-.hm-cell { width: 15px; height: 15px; border-radius: 4px; background: var(--surface-3); padding: 0; transition: transform var(--t-fast) var(--ease); display: block; }
-button.hm-cell:hover { transform: scale(1.25); }
-.hm.ov .hm-cell { width: auto; min-width: 11px; height: 13px; border-radius: 3.5px; }
-.hm.ov .hm-col { grid-template-rows: repeat(7, 13px); gap: 3px; }
-.hm.ov .hm-grid { gap: 3px; grid-template-columns: repeat(var(--wk), minmax(11px, 1fr)); }
+.hm-scroll.can-right { --fade-r: 28px; } .hm-scroll.can-left { --fade-l: 28px; }
+.hm { --min: 15px; --gap: 4px; width: 100%; min-width: calc(30px + var(--wk, 53) * (var(--min) + var(--gap))); }
+.hm-grid { display: grid; grid-template-columns: 26px repeat(var(--wk, 53), minmax(var(--min), 1fr)); grid-template-rows: 16px repeat(7, auto); gap: var(--gap); align-items: stretch; }
+.hm.ov { --min: 11px; --gap: 3px; min-width: 0; }
+.hm.ov .hm-grid { grid-template-columns: repeat(var(--wk), minmax(var(--min), 1fr)); grid-template-rows: repeat(7, auto); }
+.hm-wl { grid-column: 1; align-self: center; font-size: 0.62rem; font-weight: 600; color: var(--text-3); line-height: 1; }
+.hm-ml { grid-row: 1; font-size: 0.66rem; font-weight: 600; color: var(--text-3); white-space: nowrap; line-height: 16px; overflow: visible; }
+.hm-cell { aspect-ratio: 1; width: 100%; height: auto; border-radius: 4px; background: var(--surface-3); padding: 0; transition: transform var(--t-fast) var(--ease); display: block; min-width: 0; }
+.hm.ov .hm-cell { border-radius: 3.5px; }
+button.hm-cell:hover { transform: scale(1.2); }
 .hm-cell.is-out { background: transparent; pointer-events: none; }
 .hm-cell.is-done { background: var(--hc); }
 .hm-cell.is-missed { background: color-mix(in srgb, var(--neg) 22%, var(--surface-3)); }
@@ -83,3 +78,6 @@ button.hm-cell:hover { transform: scale(1.25); }
 .stat-grid .stat b small { font-size: 0.8rem; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
 .stat-grid.is-3 { grid-template-columns: repeat(3, 1fr); }
 @media (min-width: 720px) { .stat-grid:not(.is-3) { grid-template-columns: repeat(4, 1fr); } }
+.hm-wl { position: sticky; left: 0; z-index: 2; background: color-mix(in srgb, var(--surface) 94%, transparent); padding-right: 4px; }
+.hm.ov .hm-wl { display: none; }
+@media (min-width: 900px) { .hm:not(.ov) { --min: 12px; --gap: 3px; } }

@@ -47,7 +47,7 @@
   --safe-r: env(safe-area-inset-right, 0px);
   --nav-h: 58px;
   --nav-float: 0px;                          /* extra clearance for floating bars */
-  --nav-space: calc(var(--nav-h) + var(--safe-b) + var(--nav-float) + 36px);
+  --nav-space: calc(var(--nav-h) + var(--safe-b) + var(--nav-float) + 40px);   /* refined by app.js from the measured bar */
   --topbar-h: 52px;
   --sidebar-w: 248px; --sidebar-w-collapsed: 76px;
   --content-max: 1120px;

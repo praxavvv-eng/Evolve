@@ -39,7 +39,7 @@
 .banner.is-info { background: var(--accent-soft); border-color: var(--accent-line); } .banner.is-info .i { color: var(--accent-text); }
 
 /* ---------- page container ---------- */
-.view { width: 100%; max-width: var(--content-max); margin: 0 auto; padding: 2px max(var(--pad), var(--safe-r)) var(--nav-space) max(var(--pad), var(--safe-l)); flex: 1; outline: none; position: relative; }
+.view { width: 100%; max-width: var(--content-max); margin: 0 auto; padding: 2px max(var(--pad), var(--safe-r)) var(--nav-space) max(var(--pad), var(--safe-l)); scroll-padding-bottom: var(--nav-space); flex: 1; outline: none; position: relative; }
 .view.is-entering > * { animation: rise var(--t-slow) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 40ms); }
 .view.is-entering.is-detail > * { animation-name: slide-in; }
 

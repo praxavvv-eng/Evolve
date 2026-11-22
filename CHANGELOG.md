@@ -1,5 +1,18 @@
 # Changelog
 
+## 9.1.0: refinement update
+
+- Header: Cloud icon removed. Cloud Sync now lives in Settings > Cloud sync (connection status, pairing code, join workspace); `#/cloud` forwards there. Firebase, pairing and merge logic are unchanged.
+- Navigation: new independent Icon style setting (Outline, Rounded, Filled, Duotone) for the bottom bar and sidebar. Tabs are equal-width slots in all four bar styles, the active marker stays inside its slot, bars are shorter, and the space reserved under content is measured from the real bar (safe area included).
+- Icon picker for Habits, Discipline challenges and Goals (grouped, searchable, stored as `iconId`). Older items get an automatic icon from their name; nothing is migrated. Legacy emoji data is kept untouched but no longer displayed.
+- Home: refined progress card (ring, count-up numbers, task/habit bars) that animates only when values change; Quick Add is now four equal tiles with no horizontal overflow.
+- Finance: new balance card with Income / Expenses / Net, Indian grouping everywhere (-₹2,028, ₹1,25,000), animated figures, duplicate "Other" donut slice fixed at its cause.
+- Custom in-app date picker (month/year navigation, Today, Cancel/Confirm) replaces the native picker in forms.
+- Library: Notes preview removed from the landing page (Notes module untouched); stray ledge strip removed.
+- Gaming: separate portrait poster and landscape artwork (`banner`, additive). Featured card, Library "now playing" and game detail use the artwork, with an undistorted poster fallback; Dropped and On hold are separate; duplicate playtime controls removed.
+- Habits: heatmaps rebuilt as one responsive grid that uses the card width, with sticky weekday labels, month labels and a scroll fade where scrolling is needed.
+- Books and Games: fixed status order and a "Change status" picker; "Want to read" is a display label for the stored value "To read".
+
 ## 9.0.0: complete UI/UX redesign
 
 - New brand: Evolve mark (E built from stepped bars), app icon, PWA icons (192, 512, maskable, Apple touch), splash screen.

@@ -1,6 +1,7 @@
 /* Validation + normalization for every record type.
  * prepare(type, raw, {state, existing}) -> { record, errors }. errors is keyed by field name; empty means valid. */
 import { OPTIONS } from './schemas.js';
+import { ICON_IDS } from './itemicons.js';
 import { isDateStr, isTimeStr, num, clamp, monthKey } from './utils.js';
 
 const str = (v, max = 4000) => String(v ?? '').trim().slice(0, max);
@@ -23,7 +24,8 @@ const rules = {
   habit(raw) {
     const e = {}, schedule = oneOf(raw.schedule, OPTIONS.habitSchedule, 'Daily');
     const days = (Array.isArray(raw.days) ? raw.days : String(raw.days ?? '').split(',').filter(x => x !== '')).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6);
-    const r = { name: str(raw.name, 80), description: str(raw.description, 200), color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? String(raw.color).toLowerCase() : '#5cc28a', icon: str(raw.icon, 4) || '✦', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule };
+    const r = { name: str(raw.name, 80), description: str(raw.description, 200), color: /^#[0-9a-f]{6}$/i.test(raw.color || '') ? String(raw.color).toLowerCase() : '#5cc28a', target: Math.max(1, num(raw.target, 1)), unit: oneOf(raw.unit, OPTIONS.habitUnit, 'times'), schedule };
+    if (raw.iconId !== undefined) r.iconId = ICON_IDS.has(raw.iconId) ? raw.iconId : '';   // '' = automatic icon
     if (schedule === 'Custom') { r.days = [...new Set(days)].sort(); if (!r.days.length) e.days = 'Choose at least one day.'; }
     if (schedule === '3 days / week') r.perWeek = clamp(Math.round(num(raw.perWeek, 3)), 1, 6);
     if (!r.name) e.name = 'Give the habit a name.';
@@ -111,7 +113,7 @@ const rules = {
     const hours = Math.max(0, num(raw.hours)), est = Math.max(0, num(raw.estimatedHours));
     /* progress: Completed = 100; estimated hours are authoritative; otherwise keep the manual value */
     const progress = status === 'Completed' ? 100 : est > 0 ? clamp((hours / est) * 100) : clamp(raw.progress);
-    const r = { title: str(raw.title, 100), platform: oneOf(raw.platform, OPTIONS.platform, 'Other'), status, hours, estimatedHours: est > 0 ? est : '', rating: rating === 0 ? '' : rating, progress, cover: typeof raw.cover === 'string' ? raw.cover.slice(0, 400000) : '', notes: str(raw.notes, 1500) };
+    const r = { title: str(raw.title, 100), platform: oneOf(raw.platform, OPTIONS.platform, 'Other'), status, hours, estimatedHours: est > 0 ? est : '', rating: rating === 0 ? '' : rating, progress, cover: typeof raw.cover === 'string' ? raw.cover.slice(0, 400000) : '', banner: typeof raw.banner === 'string' ? raw.banner.slice(0, 300000) : '', notes: str(raw.notes, 1500) };
     if (!r.title) e.title = 'Enter the game title.';
     if (raw.estimatedHours !== '' && raw.estimatedHours != null && !(num(raw.estimatedHours) >= 0)) e.estimatedHours = 'Enter hours as a positive number.';
     return { r, e };
@@ -141,6 +143,7 @@ const rules = {
   challenge(raw, { existing }) {
     const e = {}, days = Math.round(num(raw.targetDays));
     const r = { name: str(raw.name, 80), startDate: raw.startDate, targetDays: days, reward: str(raw.reward, 120), logs: existing?.logs || {}, status: existing?.status || 'active' };
+    if (raw.iconId !== undefined) r.iconId = ICON_IDS.has(raw.iconId) ? raw.iconId : '';
     if (!r.name) e.name = 'Name this challenge.';
     requireDate(raw, 'startDate', e, 'a start date');
     if (!(days >= 1 && days <= 3650)) e.targetDays = 'Enter between 1 and 3650 days.';
@@ -163,6 +166,7 @@ const rules = {
     let progress = clamp(raw.progress);
     if (milestones.length) progress = Math.round((done.filter(Boolean).length / milestones.length) * 100);
     const r = { title: str(raw.title, 150), area: oneOf(raw.area, OPTIONS.goalArea, 'Personal'), status, targetDate: dateOrEmpty(raw.targetDate), progress, milestones, milestoneDone: done };
+    if (raw.iconId !== undefined) r.iconId = ICON_IDS.has(raw.iconId) ? raw.iconId : '';
     if (r.status === 'Completed') r.progress = 100;
     else if (r.progress >= 100) { r.status = 'Completed'; r.progress = 100; }
     if (!r.title) e.title = 'Describe the goal.';

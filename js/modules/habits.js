@@ -2,6 +2,7 @@
  * yearly contribution graph, weekly history and statistics. Every habit's history is separate: habitLogs[date][habitId].
  * All streak rules live in core/stats.js (rest days, unscheduled days, weekly targets, future dates). */
 import * as State from '../core/state.js';
+import { itemIcon } from '../core/itemicons.js';
 import { registerActions, emit } from '../core/events.js';
 import { toggleHabit, toggleHabitRest, find } from '../core/records.js';
 import { esc, todayStr, addDays, fmtDate, rangeDates, readableOn, relDay, plural } from '../core/utils.js';
@@ -16,6 +17,7 @@ import { toast } from '../components/toast.js';
 
 const ui = { view: 'year', week: 0, sel: '', year: 0 };
 const tint = h => `--hc:${h.color};--hc-on:${readableOn(h.color)}`;
+const ovWeeks = () => (window.innerWidth >= 1100 ? 40 : window.innerWidth >= 720 ? 26 : 18);
 const monday = () => State.get().settings.weekStartsMonday !== false;
 const streakLabel = (s, h) => { const i = habitStreakInfo(s, h); return i.value ? `${i.value}-${i.unit} streak` : ''; };
 
@@ -27,7 +29,7 @@ function row(h, s, today) {
   const sub = weekly ? `${st.weekDone}/${st.weekScheduled} this week` : (streak || (h.schedule === 'Custom' ? 'Custom days' : h.schedule));
   const offToday = !weekly && !isScheduled(h, today);
   return `<div class="row habit-row ${offToday ? 'is-off' : ''}" style="${tint(h)}" data-id="${esc(h.id)}">
-    <a class="habit-glyph" href="#/habits/${esc(h.id)}" aria-label="Open ${esc(h.name)}">${esc(h.icon || '✦')}</a>
+    <a class="habit-glyph" href="#/habits/${esc(h.id)}" aria-label="Open ${esc(h.name)}">${itemIcon(h, 'habit', 22)}</a>
     <a class="row-main" href="#/habits/${esc(h.id)}"><span class="row-title trunc">${esc(h.name)}</span><span class="row-sub"><span class="dots7" aria-hidden="true">${dots}</span><span class="trunc">${esc(rest ? 'Resting today' : offToday ? 'Not today' : sub)}</span></span></a>
     ${rest ? `<button type="button" class="rest-chip" data-action="habit-rest" data-id="${esc(h.id)}" data-date="${today}" aria-label="Remove rest day for ${esc(h.name)}">${icon('rest', { size: 15 })}Rest</button>`
       : `<button type="button" class="check-wrap" data-action="habit-toggle" data-id="${esc(h.id)}" data-date="${today}" role="checkbox" aria-checked="${done}" aria-label="Check in ${esc(h.name)} for today"><span class="check ${done ? 'is-on' : ''}">${icon('check', { size: 16 })}</span></button>`}
@@ -44,8 +46,8 @@ function renderList() {
   const best = s.habits.map(h => ({ h, i: habitStreakInfo(s, h) })).filter(x => x.i.value).sort((a, b) => (b.i.unit === 'week' ? b.i.value * 7 : b.i.value) - (a.i.unit === 'week' ? a.i.value * 7 : a.i.value))[0];
   return `${head}<div class="stack-lg">
     ${due.length ? `<div class="day-progress" style="--i:1"><div class="bar bar-lg"><span style="--w:${(done / due.length) * 100}%"></span></div></div>` : ''}
-    <section class="card card-pad overview" style="--i:2"><div class="between"><div><h2 class="t-h3">Consistency</h2><p class="t-small faint">All habits, last 18 weeks</p></div>${best ? `<span class="badge badge-accent no-dot">${icon('flame', { size: 13 })} ${best.i.value}-${best.i.unit} · ${esc(best.h.name)}</span>` : ''}</div>
-      <div class="mt-3">${habitOverview(s, 18, monday())}</div>
+    <section class="card card-pad overview" style="--i:2"><div class="between"><div><h2 class="t-h3">Consistency</h2><p class="t-small faint">All habits, last ${ovWeeks()} weeks</p></div>${best ? `<span class="badge badge-accent no-dot">${icon('flame', { size: 13 })} ${best.i.value}-${best.i.unit} · ${esc(best.h.name)}</span>` : ''}</div>
+      <div class="mt-3">${habitOverview(s, ovWeeks(), monday())}</div>
       <div class="ov-legend" aria-hidden="true"><span>Less</span><i class="ov-0"></i><i class="ov-1"></i><i class="ov-2"></i><i class="ov-3"></i><i class="ov-4"></i><span>More</span></div></section>
     <section class="card card-flush" style="--i:3"><div class="list">${ordered.map(h => row(h, s, today)).join('')}</div></section></div>`;
 }
@@ -73,7 +75,7 @@ function renderDetail(id) {
   const unit = st.unit === 'week' ? 'weeks' : 'days';
   const canMark = selSt !== 'future', canRest = !weekly && canMark && selSt !== 'done';
   const sched = weekly ? `${habitPerWeek(h)} days a week` : h.schedule === 'Custom' ? (h.days?.length ? h.days.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ') : 'Every day') : h.schedule;
-  return `<header class="page-head habit-hero" style="${tint(h)}"><div class="row-gap" style="flex-wrap:nowrap;min-width:0"><span class="habit-glyph is-lg">${esc(h.icon || '✦')}</span><div style="min-width:0"><p class="eyebrow">${esc(sched)}</p><h1 class="t-title trunc">${esc(h.name)}</h1></div></div><div class="page-head-actions">${addBtn('habit', 'Edit', { cls: 'btn btn-sm', id: h.id })}</div></header>
+  return `<header class="page-head habit-hero" style="${tint(h)}"><div class="row-gap" style="flex-wrap:nowrap;min-width:0"><span class="habit-glyph is-lg">${itemIcon(h, 'habit', 28)}</span><div style="min-width:0"><p class="eyebrow">${esc(sched)}</p><h1 class="t-title trunc">${esc(h.name)}</h1></div></div><div class="page-head-actions">${addBtn('habit', 'Edit', { cls: 'btn btn-sm', id: h.id })}</div></header>
     ${h.description ? `<p class="t-body" style="margin:-8px 0 18px">${esc(h.description)}</p>` : ''}
     <div class="stack-lg" style="${tint(h)}">
       <section class="stat-grid card card-pad" style="--i:1">${stat(`${st.current}<small> ${st.current === 1 ? st.unit : unit}</small>`, 'Current streak')}${stat(`${st.longest}<small> ${st.longest === 1 ? st.unit : unit}</small>`, 'Longest streak')}${stat(st.totalDone, 'Days completed')}${stat(st.scheduled ? `${Math.round(st.pct)}%` : '–', 'Completion')}</section>
@@ -115,6 +117,11 @@ export const route = {
   render: parts => (parts[0] ? renderDetail(parts[0]) : renderList()),
   /* Scroll the graph to the current month the first time it is shown (and to the start for past years). */
   mount(view) {
+    view.querySelectorAll('.hm-scroll').forEach(sc => {
+      const edge = () => { sc.classList.toggle('can-right', sc.scrollLeft + sc.clientWidth < sc.scrollWidth - 2); sc.classList.toggle('can-left', sc.scrollLeft > 2); };
+      if (!sc.dataset.bound) { sc.dataset.bound = '1'; sc.addEventListener('scroll', edge, { passive: true }); }
+      requestAnimationFrame(edge);
+    });
     view.querySelectorAll('[data-scrollend]').forEach(sc => {
       if (sc.dataset.done) return; sc.dataset.done = '1';
       const yr = Number(sc.dataset.year);

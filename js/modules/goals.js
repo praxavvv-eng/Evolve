@@ -6,13 +6,14 @@ import { esc, fmtDate, relDay, todayStr } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { pageHead, emptyState, addBtn, kebab, badge } from '../components/ui.js';
 import { progressBar } from '../components/charts.js';
+import { itemIcon } from '../core/itemicons.js';
 import { OPTIONS } from '../core/schemas.js';
 
 const ui = { status: 'In progress' };
 
 function card(g) {
   const done = g.status === 'Completed';
-  return `<article class="card card-pad goal-card ${done ? 'is-done' : ''}"><div class="between"><div style="min-width:0"><p class="t-micro">${esc(g.area)}</p><h3 class="t-h2">${esc(g.title)}</h3></div>${kebab('goal', g.id)}</div>
+  return `<article class="card card-pad goal-card ${done ? 'is-done' : ''}"><div class="between" style="align-items:flex-start"><div class="row-gap" style="flex-wrap:nowrap;min-width:0;align-items:flex-start"><span class="item-ico">${itemIcon(g, 'goal', 22)}</span><div style="min-width:0"><p class="t-micro">${esc(g.area)}</p><h3 class="t-h2">${esc(g.title)}</h3></div></div>${kebab('goal', g.id)}</div>
     <div class="between mt-3"><span class="t-small">${g.targetDate ? esc(g.targetDate < todayStr() && !done ? `${relDay(g.targetDate)}` : `By ${fmtDate(g.targetDate, { day: 'numeric', month: 'short', year: 'numeric' })}`) : 'No target date'}</span><b class="t-num">${g.progress}%</b></div><div class="mt-2">${progressBar(g.progress, done ? 'is-pos' : '')}</div>
     ${g.milestones?.length ? `<ul class="milestones mt-3">${g.milestones.map((m, i) => `<li><button type="button" class="ms ${g.milestoneDone[i] ? 'is-on' : ''}" data-action="goal-ms" data-id="${esc(g.id)}" data-i="${i}" role="checkbox" aria-checked="${Boolean(g.milestoneDone[i])}"><span class="check ${g.milestoneDone[i] ? 'is-on' : ''}">${icon('check', { size: 14 })}</span><span>${esc(m)}</span></button></li>`).join('')}</ul>` : ''}
     ${done ? `<div class="mt-3">${badge('Completed', 'pos')}</div>` : ''}</article>`;

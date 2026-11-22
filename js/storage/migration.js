@@ -18,6 +18,7 @@ export const ACCENTS = {
 export const LEGACY_ACCENTS = { champagne: 'blue', titanium: 'blue', copper: 'orange', sage: 'green', ice: 'cyan', rose: 'red', emerald: 'green', amber: 'orange', indigo: 'blue', violet: 'violet', cyan: 'cyan', blue: 'blue' };
 export const APP_STYLES = ['minimal', 'glass', 'cinematic', 'classic'];
 export const NAV_STYLES = ['minimal', 'cinematic', 'glass', 'casual'];
+export const NAV_ICON_STYLES = ['outline', 'rounded', 'filled', 'duotone'];
 export const HABIT_COLORS = [
   { id: 'green', name: 'Green', hex: '#5cc28a' }, { id: 'blue', name: 'Blue', hex: '#5b9df0' }, { id: 'orange', name: 'Orange', hex: '#f0974a' },
   { id: 'teal', name: 'Teal', hex: '#3fc1b5' }, { id: 'gold', name: 'Gold', hex: '#e5c25b' }, { id: 'coral', name: 'Coral', hex: '#e36f6f' },
@@ -26,7 +27,7 @@ export const HABIT_COLORS = [
 export const XP_CATEGORIES = ['consistency', 'academics', 'fitness', 'finance', 'gaming', 'learning', 'personal'];
 
 export const freshSettings = () => ({
-  theme: 'dark', amoled: true, accent: 'blue', customAccent: '', style: 'minimal', navStyle: 'minimal', glass: 60,
+  theme: 'dark', amoled: true, accent: 'blue', customAccent: '', style: 'minimal', navStyle: 'minimal', navIcons: 'outline', glass: 60,
   density: 'comfortable', textSize: 'default', motion: 'system',
   currency: 'INR', weekStartsMonday: true, dailyXpCap: 100, levelRewards: {}
 });
@@ -88,6 +89,7 @@ export function normalizeState(input) {
   s.accent = ACCENTS[inS.accent] ? inS.accent : (LEGACY_ACCENTS[inS.accent] || LEGACY_ACCENTS[inS.palette] || 'blue');   // V6 stored a palette id; V7+ stores an accent id
   s.style = APP_STYLES.includes(inS.style) ? inS.style : 'minimal';
   s.navStyle = NAV_STYLES.includes(inS.navStyle) ? inS.navStyle : 'minimal';
+  s.navIcons = NAV_ICON_STYLES.includes(inS.navIcons) ? inS.navIcons : 'outline';
   delete s.palette;
   if (!s.customAccent && src.settings?.accent && /^#[0-9a-f]{6}$/i.test(src.settings.accent)) s.customAccent = src.settings.accent;
   if (!/^#[0-9a-f]{6}$/i.test(s.customAccent || '')) s.customAccent = '';

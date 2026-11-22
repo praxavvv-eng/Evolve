@@ -13,6 +13,12 @@ npm run preview    # serve the production build
 
 Deploy `dist/` to any static host (Vercel, Netlify, Firebase Hosting). The Firebase web config lives in `js/firebase.js` (web API keys are public by design; protect data with Firestore security rules).
 
+## Where things are
+
+- Cloud sync: Settings > Cloud sync (rendered by `js/cloud/boot.js`, shown through `js/core/cloudview.js`).
+- Navigation icon families: `js/core/navicons.js`. Per-item icons: `js/core/itemicons.js`. Date picker: `js/components/datepicker.js`. Animated numbers: `js/components/countup.js`.
+- Additive fields: `settings.navIcons`, `habit/challenge/goal.iconId`, `game.banner`.
+
 ## Design system
 
 Everything visual is defined once.

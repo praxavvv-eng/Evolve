@@ -7,6 +7,7 @@ import { collection, doc, getDoc, getDocs, onSnapshot, runTransaction, serverTim
 import * as State from '../core/state.js';
 import { registerActions, on, emit } from '../core/events.js';
 import * as Router from '../router.js';
+import { cloudView } from '../core/cloudview.js';
 import { esc } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { toast } from '../components/toast.js';
@@ -442,6 +443,9 @@ export async function joinWorkspace(code) {
 
 function renderCloudPage() {
   const connected = status.state === 'synced';
+  const when = ms => new Date(ms).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  const LABEL = { off: 'Not connected', connecting: 'Connecting…', idle: 'Up to date', syncing: 'Syncing…', offline: 'Offline', error: 'Needs attention', conflict: 'Merged changes' };
+  const tone = health.status === 'error' ? 'is-error' : health.status === 'offline' ? 'is-warn' : connected || health.status === 'idle' ? 'is-ok' : 'is-wait';
 
   return `
     <header class="page-head">
@@ -453,135 +457,63 @@ function renderCloudPage() {
 
     <div class="stack-lg">
 
-      <section class="card card-pad">
-        <div class="set-head">
-          ${icon('cloud', { size: 20 })}
-          <h2 class="t-h2">Connection</h2>
-        </div>
-
-        <p class="t-body">${esc(status.message)}</p>
-
-        <p class="t-small">
-          ${connected ? 'Connected' : 'Connection status: ' + esc(status.state)}
-        </p>
-
-        <p class="t-small">
-          Workspace ID: ${esc(workspaceId ? workspaceId.slice(0, 12) + '…' : 'Connecting')}
-        </p>
+      <section class="card card-pad set-card cloud-card">
+        <div class="set-head">${icon('cloud', { size: 20 })}<h2 class="t-h2">Connection</h2></div>
+        <div class="cloud-status ${tone}"><span class="cs-dot" aria-hidden="true"></span><div><b>${esc(LABEL[health.status] || status.state)}</b><p>${esc(status.message)}</p></div></div>
+        <dl class="kv">
+          <div><dt>Workspace ID</dt><dd class="t-num">${esc(workspaceId ? workspaceId.slice(0, 12) + '…' : 'Connecting')}</dd></div>
+          <div><dt>Last successful sync</dt><dd>${health.lastOk ? esc(when(health.lastOk)) : 'Not synced yet'}</dd></div>
+          ${health.lastError ? `<div><dt>Last problem</dt><dd>${esc(health.lastError)}${health.lastErrorAt ? `<br><span class="t-small">${esc(when(health.lastErrorAt))}</span>` : ''}</dd></div>` : ''}
+          ${health.conflicts ? `<div><dt>Merged conflicts</dt><dd>${esc(String(health.conflicts))}</dd></div>` : ''}
+        </dl>
       </section>
 
-      <section class="card card-pad">
-        <div class="set-head">
-          ${icon('smartphone', { size: 20 })}
-          <h2 class="t-h2">Pair another device</h2>
+      <section class="card card-pad set-card cloud-card">
+        <div class="set-head">${icon('smartphone', { size: 20 })}<h2 class="t-h2">Pair another device</h2></div>
+        <p class="t-body">Generate a one-time code here. On your other device, open Evolve and enter that code in Settings, Cloud sync.</p>
+        <p class="t-small">The code expires after 10 minutes and can only be used once.</p>
+        <div class="set-actions">
+          <button class="btn btn-primary" type="button" data-action="cloud-create-code" ${ready ? '' : 'disabled'}>${icon('plus', { size: 17 })} Generate pairing code</button>
         </div>
-
-        <p class="t-body">
-          Generate a one-time code here. On your other device,
-          open Evolve and enter that code in Cloud sync.
-        </p>
-
-        <p class="t-small">
-          The code expires after 10 minutes and can only be used once.
-        </p>
-
-        <button
-          class="btn btn-primary"
-          type="button"
-          data-action="cloud-create-code"
-          ${ready ? '' : 'disabled'}
-        >
-          ${icon('plus', { size: 17 })} Generate pairing code
-        </button>
-
         ${latestCode ? `
           <div class="field mt-4">
-            <label>Pairing code</label>
-            <input
-              value="${esc(latestCode)}"
-              readonly
-              aria-label="Pairing code"
-              style="font-family:monospace;font-size:13px"
-            >
+            <label for="cloud-latest-code">Pairing code</label>
+            <input id="cloud-latest-code" value="${esc(latestCode)}" readonly aria-label="Pairing code" style="font-family:var(--font-mono);font-size:0.85rem">
           </div>
-
-          <button
-            class="btn mt-2"
-            type="button"
-            data-action="cloud-copy-code"
-          >
-            ${icon('copy', { size: 16 })} Copy code
-          </button>
-        ` : ''}
+          <button class="btn mt-2" type="button" data-action="cloud-copy-code">${icon('copy', { size: 16 })} Copy code</button>` : ''}
       </section>
 
-      <section class="card card-pad">
-        <div class="set-head">
-          ${icon('link', { size: 20 })}
-          <h2 class="t-h2">Join an existing workspace</h2>
-        </div>
-
-        <p class="t-body">
-          Enter the pairing code generated on your other device.
-          Joining replaces this browser's active workspace with
-          the paired workspace. A snapshot of the previous local
-          data is kept.
-        </p>
-
+      <section class="card card-pad set-card cloud-card">
+        <div class="set-head">${icon('link', { size: 20 })}<h2 class="t-h2">Join an existing workspace</h2></div>
+        <p class="t-body">Enter the pairing code generated on your other device. Joining replaces this browser's active workspace with the paired workspace. A snapshot of the previous local data is kept.</p>
         <div class="field mt-3">
           <label for="cloud-pairing-code">Pairing code</label>
-          <input
-            id="cloud-pairing-code"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Paste your pairing code"
-          >
+          <input id="cloud-pairing-code" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your pairing code" data-keep>
         </div>
-
-        <button
-          class="btn btn-primary mt-3"
-          type="button"
-          data-action="cloud-join"
-        >
-          Join workspace
-        </button>
+        <div class="set-actions"><button class="btn btn-primary" type="button" data-action="cloud-join">Join workspace</button></div>
       </section>
 
-      <p class="t-small">
-        Your app opens without a login screen. Firebase creates
-        a private anonymous device identity in the background.
-        Keep at least one paired device available as a recovery device.
-      </p>
+      <p class="t-small faint">Your app opens without a login screen. Firebase creates a private anonymous device identity in the background. Keep at least one paired device available as a recovery device.</p>
 
     </div>
   `;
 }
 
+// Cloud sync lives in Settings now. The screen is shared with Settings through core/cloudview.js,
+// and the old #/cloud address still works by forwarding there.
+cloudView.render = renderCloudPage;
 Router.register({
   id: 'cloud',
-  render: renderCloudPage
+  render() {
+    queueMicrotask(() => location.replace('#/settings/cloud'));
+    return '';
+  }
 });
-
-// Add a Cloud sync shortcut to the existing top bar.
-const topbarEnd = document.querySelector('.topbar-end');
-
-if (topbarEnd && !document.querySelector('[data-action="cloud-open"]')) {
-  const button = document.createElement('button');
-
-  button.type = 'button';
-  button.className = 'icon-btn is-solid';
-  button.dataset.action = 'cloud-open';
-  button.setAttribute('aria-label', 'Cloud sync');
-  button.title = 'Cloud sync';
-  button.innerHTML = icon('cloud', { size: 20 });
-
-  topbarEnd.append(button);
-}
+emit('view:refresh');
 
 registerActions({
   'cloud-open'() {
-    Router.navigate('cloud');
+    location.hash = '#/settings/cloud';
   },
 
   async 'cloud-create-code'() {

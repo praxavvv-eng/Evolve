@@ -3,7 +3,7 @@
 import * as State from '../core/state.js';
 import { registerActions, registerChange, registerInput, emit } from '../core/events.js';
 import { contributeSavings, find } from '../core/records.js';
-import { debounce, esc, todayStr, monthKey, addMonths, fmtMonth, fmtMonthShort, fmtDate, money, num, daysInMonth, pct, groupBy, plural, relDay } from '../core/utils.js';
+import { moneyHTML, debounce, esc, todayStr, monthKey, addMonths, fmtMonth, fmtMonthShort, fmtDate, money, num, daysInMonth, pct, groupBy, plural, relDay } from '../core/utils.js';
 import { icon } from '../core/icons.js';
 import { monthTotals, recordedBalance, budgetSpent } from '../core/stats.js';
 import { donut, bars, progressBar, CHART_COLORS } from '../components/charts.js';
@@ -11,6 +11,7 @@ import { pageHead, emptyState, addBtn, kebab, sectionHead, badge } from '../comp
 import { selectHTML } from '../components/dropdown.js';
 import { openSheet } from '../components/modal.js';
 import { OPTIONS, CAT_ICONS } from '../core/schemas.js';
+import { shown, run } from '../components/countup.js';
 import { toast } from '../components/toast.js';
 
 const ui = { tab: 'overview', month: monthKey(todayStr()), type: 'all', category: 'All', q: '', all: false };
@@ -20,7 +21,7 @@ function txRow(t) {
   return `<div class="row tx-row" data-id="${esc(t.id)}"><a class="tx-link" href="#/finance/tx/${esc(t.id)}" aria-label="Open ${esc(t.note || t.category)}">
       <span class="row-lead tx-ico ${inc ? 'is-in' : ''}">${icon(CAT_ICONS[t.category] || 'tag', { size: 19 })}</span>
       <span class="row-main"><span class="row-title trunc">${esc(t.note || t.category)}</span><span class="row-sub trunc">${esc(t.category)}${t.recurrence && t.recurrence !== 'None' ? ` · ${esc(t.recurrence)}` : ''}</span></span>
-      <span class="tx-amt t-num ${inc ? 'pos' : ''}">${inc ? '+' : '−'}${esc(money(t.amount))}</span></a>${kebab('transaction', t.id)}</div>`;
+      <span class="tx-amt t-num ${inc ? 'pos' : ''}">${inc ? '+' : '-'}${esc(money(t.amount))}</span></a>${kebab('transaction', t.id)}</div>`;
 }
 
 function filtered(s) {
@@ -49,8 +50,11 @@ function renderOverview() {
   const cur = monthTotals(s, ui.month), prev = monthTotals(s, addMonths(ui.month, -1)), nowT = monthTotals(s, nowKey);
   const balance = recordedBalance(s);
   const cats = Object.entries(cur.byCat).sort((a, b) => b[1] - a[1]);
-  const top = cats.slice(0, 5), rest = cats.slice(5).reduce((a, [, v]) => a + v, 0);
-  const segs = [...top.map(([label, value], i) => ({ label, value, color: CHART_COLORS[i] })), ...(rest > 0 ? [{ label: 'Other', value: rest, color: CHART_COLORS[5] }] : [])];
+  /* Every real category keeps its own slice. Only when there are more than six are the smallest ones combined, and that
+   * combined slice is labelled "Smaller categories" so it can never be mistaken for the real "Other" category. */
+  const showAll = cats.length <= 6, top = showAll ? cats : cats.slice(0, 5), rest = showAll ? [] : cats.slice(5);
+  const restSum = rest.reduce((a, [, v]) => a + v, 0);
+  const segs = [...top.map(([label, value], i) => ({ label, value, color: CHART_COLORS[i] })), ...(restSum > 0 ? [{ label: `Smaller categories (${rest.length})`, value: restSum, color: CHART_COLORS[7] }] : [])];
   const months = Array.from({ length: 6 }, (_, i) => addMonths(nowKey, i - 5));
   const monthData = months.map(m => ({ m, ...monthTotals(s, m) }));
   const monthsWithData = monthData.filter(d => d.count > 0).length;
@@ -60,22 +64,23 @@ function renderOverview() {
 
   return `${head}<div class="stack-lg">
     <div class="seg seg-fit" role="tablist" aria-label="Finance sections" style="--i:1">${[['overview', 'Overview'], ['transactions', 'Transactions'], ['plans', 'Budgets']].map(([id, l]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'is-on' : ''}" data-action="fin-tab" data-tab="${id}">${l}</button>`).join('')}</div>
-    ${ui.tab === 'overview' ? `
-    <section class="wallet" style="--i:1" aria-label="Wallet balance">
-      <div class="wallet-top"><span class="wallet-label">Recorded balance</span>${icon('wallet', { size: 22 })}</div>
-      <div class="wallet-amount t-num">${esc(money(balance))}</div>
-      <p class="wallet-note">Income minus expenses you have recorded</p>
-      <div class="wallet-foot"><div><small>In · ${esc(fmtMonthShort(ui.month))}</small><b class="t-num">${esc(money(cur.income, { compactMode: true }))}</b></div><div><small>Out · ${esc(fmtMonthShort(ui.month))}</small><b class="t-num">${esc(money(cur.expense, { compactMode: true }))}</b></div></div>
-    </section>
-
-` : ''}
     <div class="month-nav" style="--i:2"><button class="icon-btn is-solid" type="button" data-action="fin-month" data-dir="-1" aria-label="Previous month">${icon('chevron-left', { size: 20 })}</button>
       <button class="month-label" type="button" data-action="fin-month-now" ${ui.month === nowKey ? 'aria-current="date"' : ''} title="Jump to this month">${esc(fmtMonth(ui.month))}</button>
       <button class="icon-btn is-solid" type="button" data-action="fin-month" data-dir="1" aria-label="Next month">${icon('chevron-right', { size: 20 })}</button></div>
+    ${ui.tab === 'overview' ? `
+    <section class="wallet" style="--i:2" aria-label="Wallet balance">
+      <div class="wallet-top"><span class="wallet-label">Recorded balance</span><span class="wallet-ico">${icon('wallet', { size: 18 })}</span></div>
+      <div class="wallet-amount t-num ${balance < 0 ? 'is-neg' : ''}">${moneyHTML(balance, 'f-bal', { from: shown('f-bal') })}</div>
+      <div class="wallet-foot" role="group" aria-label="${esc(fmtMonth(ui.month))} summary">
+        <div class="wf is-in"><span class="wf-lab">${icon('arrow-down-left', { size: 13 })}Income</span><b class="t-num">${moneyHTML(cur.income, 'f-inc', { from: shown('f-inc') })}</b></div>
+        <div class="wf is-out"><span class="wf-lab">${icon('arrow-up-right', { size: 13 })}Expenses</span><b class="t-num">${moneyHTML(cur.expense, 'f-exp', { from: shown('f-exp') })}</b></div>
+        <div class="wf is-net ${cur.net < 0 ? 'is-neg' : ''}"><span class="wf-lab">Net</span><b class="t-num">${moneyHTML(cur.net, 'f-net', { sign: true, from: shown('f-net') })}</b></div>
+      </div>
+    </section>` : ''}
+
 
 
     ${ui.tab === 'overview' ? `
-    <div class="trio" style="--i:3"><div class="card card-pad stat"><span>Income</span><b class="pos t-num">${esc(money(cur.income, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Spent</span><b class="t-num">${esc(money(cur.expense, { compactMode: true }))}</b></div><div class="card card-pad stat"><span>Net</span><b class="t-num ${cur.net < 0 ? 'neg' : ''}">${esc(money(cur.net, { compactMode: true }))}</b></div></div>
 
     ${cur.items.length ? `<section style="--i:3"><div class="sec-head tight"><h2>Recent</h2><button type="button" class="link-btn" data-action="fin-tab" data-tab="transactions">See all ${icon('chevron-right', { size: 14 })}</button></div><div class="card card-flush"><div class="list">${[...cur.items].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 4).map(txRow).join('')}</div></div></section>` : ''}
     <div class="grid cols-2" style="--i:4">
@@ -119,7 +124,7 @@ function renderTx(id) {
   if (!t) return `<div class="card">${emptyState({ icon: 'receipt', title: 'Transaction not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/finance">Back to Finance</a>' })}</div>`;
   const inc = t.type === 'income';
   return `<header class="page-head"><div><p class="eyebrow">${inc ? 'Income' : 'Expense'}</p><h1 class="t-title">${esc(t.note || t.category)}</h1></div></header>
-    <div class="stack-lg"><section class="card card-pad tx-detail" style="--i:1"><span class="row-lead tx-ico big ${inc ? 'is-in' : ''}">${icon(CAT_ICONS[t.category] || 'tag', { size: 24 })}</span><div class="tx-big t-num ${inc ? 'pos' : ''}">${inc ? '+' : '−'}${esc(money(t.amount))}</div>${badge(inc ? 'Income' : 'Expense', inc ? 'pos' : '')}
+    <div class="stack-lg"><section class="card card-pad tx-detail" style="--i:1"><span class="row-lead tx-ico big ${inc ? 'is-in' : ''}">${icon(CAT_ICONS[t.category] || 'tag', { size: 24 })}</span><div class="tx-big t-num ${inc ? 'pos' : ''}">${inc ? '+' : '-'}${esc(money(t.amount))}</div>${badge(inc ? 'Income' : 'Expense', inc ? 'pos' : '')}
       <dl class="kv mt-4"><div><dt>Category</dt><dd>${esc(t.category)}</dd></div><div><dt>Date</dt><dd>${esc(fmtDate(t.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</dd></div><div><dt>Description</dt><dd>${esc(t.note || '—')}</dd></div><div><dt>Repeats</dt><dd>${esc(t.recurrence || 'None')}${t.recurrence && t.recurrence !== 'None' ? ' <span class="t-small">(label only)</span>' : ''}</dd></div></dl></section>
       <div class="row-gap" style="--i:2">${addBtn('transaction', 'Edit', { cls: 'btn btn-primary', id: t.id })}<button class="btn btn-danger" type="button" data-action="delete" data-type="transaction" data-id="${esc(t.id)}" data-back="#/finance">${icon('trash', { size: 18 })} Delete</button></div></div>`;
 }
@@ -147,5 +152,6 @@ registerInput({ 'fin-q'(el) { ui.q = el.value; refreshSearch(); } });
 export const route = {
   id: 'finance',
   render: parts => (parts[0] === 'tx' && parts[1] ? renderTx(parts[1]) : renderOverview()),
-  title: parts => (parts[0] === 'tx' ? 'Transaction' : 'Finance')
+  title: parts => (parts[0] === 'tx' ? 'Transaction' : 'Finance'),
+  mount: view => run(view)
 };

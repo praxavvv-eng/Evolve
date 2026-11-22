@@ -3,6 +3,8 @@
  * delete-with-undo and image selection for game covers. */
 import * as State from '../core/state.js';
 import { schemas, CAT_ICONS, OPTIONS, WEEKDAYS } from '../core/schemas.js';
+import { dateFieldHTML, refreshDateField } from './datepicker.js';
+import { ICON_GROUPS, itemIcon, itemIconId } from '../core/itemicons.js';
 import { saveRecord, removeRecord, restoreTrash } from '../core/records.js';
 import { openSheet, confirmDialog } from './modal.js';
 import { selectHTML } from './dropdown.js';
@@ -29,7 +31,7 @@ function nextFreeNo(subject, type) {
   return '';
 }
 
-const GROUPED = ['segmented', 'cover', 'colors', 'pills', 'weekdays', 'categories', 'txtype'];
+const GROUPED = ['segmented', 'cover', 'colors', 'pills', 'weekdays', 'categories', 'txtype', 'iconpicker'];
 function catList(type, current) {
   const list = [...(type === 'income' ? OPTIONS.incomeCategory : OPTIONS.expenseCategory)];
   if (current && !list.includes(current)) list.push(current);          // never hide the category of an existing record
@@ -50,7 +52,7 @@ function fieldHTML(f, values, fid, errors) {
   switch (f.type) {
     case 'select': {
       const opts = f.options === 'subjects' ? subjectOptions(values.subject) : f.options;
-      ctl = selectHTML({ name: f.name, id, value: v, options: opts, label: f.label });
+      ctl = selectHTML({ name: f.name, id, value: v, options: opts, label: f.pickerTitle || f.label });
       break;
     }
     case 'segmented': {
@@ -69,6 +71,16 @@ function fieldHTML(f, values, fid, errors) {
     case 'textarea':
       ctl = `<textarea id="${id}" name="${f.name}" rows="${f.rows || 3}" maxlength="${f.max || 4000}" placeholder="${esc(f.placeholder || '')}">${esc(v)}</textarea>`;
       break;
+    case 'iconpicker': {
+      const kind = f.kind || 'habit', cur = values[f.name] || '', rec = { iconId: cur, name: values.name || values.title || '' };
+      const opt = ([id, label, kw]) => `<button type="button" class="ip-opt ${cur === id ? 'is-on' : ''}" data-icon="${id}" data-kw="${esc(`${label} ${kw}`.toLowerCase())}" aria-pressed="${cur === id}" title="${esc(label)}"><span class="ip-ico">${itemIcon({ iconId: id }, kind, 22)}</span><span class="ip-lab">${esc(label)}</span><i class="ip-check">${icon('check', { size: 12 })}</i></button>`;
+      ctl = `<div class="icon-picker" data-iconpicker data-kind="${kind}"><input type="hidden" name="${f.name}" value="${esc(cur)}">
+        <button type="button" class="ip-trigger" aria-expanded="false" aria-controls="${id}-panel"><span class="ip-preview" data-ip-preview>${itemIcon(rec, kind, 24)}</span><span class="ip-name"><b data-ip-name>${cur ? esc(ICON_GROUPS.flatMap(g => g[1]).find(i => i[0] === cur)?.[1] || 'Icon') : 'Automatic'}</b><small>${cur ? 'Chosen by you' : 'Matches the name. Tap to choose'}</small></span>${icon('chevron-down', { size: 18 })}</button>
+        <div class="ip-panel" id="${id}-panel" hidden><div class="ip-search"><input type="search" placeholder="Search icons" aria-label="Search icons" data-ip-search autocomplete="off"></div>
+          <div class="ip-scroll"><div class="ip-group"><div class="ip-grid"><button type="button" class="ip-opt ip-auto ${cur ? '' : 'is-on'}" data-icon="" data-kw="automatic auto name" aria-pressed="${!cur}"><span class="ip-ico">${icon('sparkles', { size: 22 })}</span><span class="ip-lab">Automatic</span><i class="ip-check">${icon('check', { size: 12 })}</i></button></div></div>
+          ${ICON_GROUPS.map(([g, list]) => `<div class="ip-group" data-ip-group><p class="t-micro">${esc(g)}</p><div class="ip-grid">${list.map(opt).join('')}</div></div>`).join('')}<p class="ip-none t-small" hidden>No icons match.</p></div></div></div>`;
+      break;
+    }
     case 'pills':
       ctl = `<div class="pill-seg" role="radiogroup" aria-label="${esc(f.label)}">${f.options.map(o => `<label style="--pc:${o.color || 'var(--accent)'}"><input type="radio" name="${f.name}" value="${esc(o.value)}" ${String(v) === String(o.value) ? 'checked' : ''}><span>${esc(o.label)}</span></label>`).join('')}</div>`;
       break;
@@ -90,9 +102,13 @@ function fieldHTML(f, values, fid, errors) {
       ctl = `<div class="cat-grid" role="radiogroup" aria-label="${esc(f.label)}" data-cats>${catGrid(f.name, catList(values.type, v), v, fid)}</div>`;
       break;
     case 'cover':
-      ctl = `<div class="cover-pick"><div class="thumb ${f.poster ? 'is-poster' : ''}" data-cover-thumb style="${v ? `background-image:url('${esc(v)}')` : ''}">${v ? '' : icon('image', { size: 20 })}</div>
-        <div class="cover-actions"><label class="btn btn-sm" for="${id}-file">${icon('upload', { size: 16 })} Choose image</label><input class="sr-only" type="file" id="${id}-file" accept="image/*" data-cover-file><button type="button" class="btn btn-sm btn-ghost" data-cover-clear ${v ? '' : 'hidden'}>Remove</button></div>
+      ctl = `<div class="cover-pick" data-cover-pick data-name="${f.name}" data-ratio="${f.ratio || 0.75}" data-maxw="${f.maxW || 600}" data-limit="${f.limit || 190000}"><div class="thumb ${f.poster ? 'is-poster' : ''} ${f.landscape ? 'is-landscape' : ''}" data-cover-thumb style="${v ? `background-image:url('${esc(v)}')` : ''}">${v ? '' : icon('image', { size: 20 })}</div>
+        <div class="cover-actions"><label class="btn btn-sm" for="${id}-file">${icon('upload', { size: 16 })} ${v ? 'Replace image' : 'Choose image'}</label><input class="sr-only" type="file" id="${id}-file" accept="image/*" data-cover-file><button type="button" class="btn btn-sm btn-ghost" data-cover-clear ${v ? '' : 'hidden'}>Remove</button></div>
         <input type="hidden" name="${f.name}" value="${esc(v)}"></div>`;
+      break;
+    case 'date':
+      ctl = dateFieldHTML({ id, name: f.name, value: v, invalid: Boolean(err) });
+      if (f.quick) ctl += `<div class="suggest quick-dates" aria-label="Quick dates">${(quickSets[f.quick] || quickSets.true).map(([l, n]) => `<button type="button" data-quick="${n}" class="${v && v === addDays(todayStr(), n) ? 'is-on' : ''}">${l}</button>`).join('')}</div>`;
       break;
     default: {
       const type = f.type === 'number' ? 'number' : f.type;
@@ -124,7 +140,8 @@ export function collect(form) {
 
 /* ---------- image helpers ---------- */
 /** Poster pipeline: centre-crop to 3:4, step-down scaling for sharp results, JPEG sized to stay practical for storage and cloud sync. */
-function readCover(file, R = 3 / 4) {
+function readCover(file, ratio, { maxW = 600, limit = 190000 } = {}) {
+  const R = ratio || 3 / 4;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read that image.'));
@@ -135,7 +152,7 @@ function readCover(file, R = 3 / 4) {
         let cw = img.width, ch = cw / R;
         if (ch > img.height) { ch = img.height; cw = ch * R; }
         const sx = (img.width - cw) / 2, sy = (img.height - ch) / 2;
-        const outW = Math.min(600, Math.round(cw)), outH = Math.round(outW / R);
+        const outW = Math.min(maxW, Math.round(cw)), outH = Math.round(outW / R);
         const make = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; return [c, x]; };
         let [cur, cx] = make(Math.round(cw), Math.round(ch));
         cx.drawImage(img, sx, sy, cw, ch, 0, 0, cur.width, cur.height);
@@ -147,7 +164,7 @@ function readCover(file, R = 3 / 4) {
         ox.fillStyle = '#000'; ox.fillRect(0, 0, outW, outH);
         ox.drawImage(cur, 0, 0, outW, outH);
         let q = 0.88, data = out.toDataURL('image/jpeg', q);
-        while (data.length > 190000 && q > 0.66) { q -= 0.06; data = out.toDataURL('image/jpeg', q); }
+        while (data.length > limit && q > 0.5) { q -= 0.06; data = out.toDataURL('image/jpeg', q); }
         resolve(data);
       };
       img.src = reader.result;
@@ -234,7 +251,7 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
         e.target.style.setProperty('--p', `${((e.target.value - f.min) / (f.max - f.min)) * 100}%`);
         const out = e.target.parentElement.querySelector('output'); if (out) out.textContent = `${e.target.value}${f.suffix || ''}`;
       }
-      if (e.target.matches('input[type=date],input[type=time]')) syncClear(e.target);
+      if (e.target.matches('input[data-date],input[type=time]')) syncClear(e.target);
       const blk = e.target.closest('[data-field]');
       if (blk?.classList.contains('has-error')) { blk.classList.remove('has-error'); const er = blk.querySelector('.field-error'); er.hidden = true; }
     });
@@ -246,10 +263,36 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
         form.querySelector('.amount-line')?.classList.toggle('is-income', cur.type === 'income');
         const sub = root.querySelector('button[type=submit]'); if (sub && !existing) sub.textContent = cur.type === 'income' ? 'Add income' : 'Add expense';
       }
-      if (e.target.matches('input[type=date]')) syncQuick(e.target);
+      if (e.target.matches('input[data-date]')) syncQuick(e.target);
     });
     const syncQuick = el => { const wrap = el.closest('[data-field]'); wrap?.querySelectorAll('[data-quick]').forEach(b => b.classList.toggle('is-on', el.value === addDays(todayStr(), Number(b.dataset.quick)))); };
     const syncClear = el => { const btn = el.closest('[data-field]')?.querySelector('[data-clear]'); if (btn) btn.hidden = !el.value; };
+    /* icon picker: open/close, search, choose; the preview follows the name while the icon is automatic */
+    form.querySelectorAll('[data-iconpicker]').forEach(pk => {
+      const hidden = pk.querySelector('input[type=hidden]'), panel = pk.querySelector('.ip-panel'), trig = pk.querySelector('.ip-trigger'), kind = pk.dataset.kind;
+      const preview = () => {
+        const nameEl = form.querySelector('input[name=name], input[name=title]');
+        pk.querySelector('[data-ip-preview]').innerHTML = itemIcon({ iconId: hidden.value, name: nameEl?.value || '' }, kind, 24);
+      };
+      trig.addEventListener('click', () => { const open = panel.hidden; panel.hidden = !open; trig.setAttribute('aria-expanded', String(open)); if (open) panel.querySelector('.ip-opt.is-on')?.scrollIntoView({ block: 'nearest' }); });
+      panel.addEventListener('click', e => {
+        const o = e.target.closest('.ip-opt'); if (!o) return;
+        hidden.value = o.dataset.icon;
+        panel.querySelectorAll('.ip-opt').forEach(x => { const on = x === o; x.classList.toggle('is-on', on); x.setAttribute('aria-pressed', String(on)); });
+        pk.querySelector('[data-ip-name]').textContent = o.dataset.icon ? o.title : 'Automatic';
+        pk.querySelector('.ip-trigger small').textContent = o.dataset.icon ? 'Chosen by you' : 'Matches the name. Tap to choose';
+        preview(); panel.hidden = true; trig.setAttribute('aria-expanded', 'false');
+        hidden.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      pk.querySelector('[data-ip-search]').addEventListener('input', e => {
+        const q = e.target.value.trim().toLowerCase(); let any = false;
+        panel.querySelectorAll('.ip-opt').forEach(o => { const show = !q || o.dataset.kw.includes(q); o.hidden = !show; if (show) any = true; });
+        panel.querySelectorAll('[data-ip-group]').forEach(g => { g.hidden = ![...g.querySelectorAll('.ip-opt')].some(o => !o.hidden); });
+        panel.querySelector('.ip-none').hidden = any;
+      });
+      form.addEventListener('input', e => { if (!hidden.value && /^(name|title)$/.test(e.target.name || '')) preview(); });
+    });
+
     form.addEventListener('click', e => {
       const st = e.target.closest('[data-step]');
       if (st) {
@@ -258,24 +301,27 @@ export function openForm(type, { id = '', prefill = {}, onSaved, title } = {}) {
         inp.value = String(next); inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
       const qd = e.target.closest('[data-quick]');
-      if (qd) { const inp = qd.closest('[data-field]').querySelector('input[type=date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); syncQuick(inp); }
+      if (qd) { const inp = qd.closest('[data-field]').querySelector('input[data-date]'); inp.value = addDays(todayStr(), Number(qd.dataset.quick)); refreshDateField(inp); inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); syncQuick(inp); }
       const ps = e.target.closest('[data-preset]');
       if (ps) { const inp = ps.closest('[data-field]').querySelector('input'); inp.value = ps.dataset.preset; inp.dispatchEvent(new Event('input', { bubbles: true })); }
       const cl = e.target.closest('[data-clear]');
-      if (cl) { const inp = cl.closest('[data-field]').querySelector('input'); inp.value = ''; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.focus(); }
+      if (cl) { const inp = cl.closest('[data-field]').querySelector('input'); inp.value = ''; if (inp.dataset.date !== undefined) refreshDateField(inp); inp.dispatchEvent(new Event('input', { bubbles: true })); (inp.type === 'hidden' ? cl.closest('[data-field]').querySelector('.date-trigger') : inp)?.focus(); }
       const s = e.target.closest('[data-suggest]');
       if (s) { form.elements.exercise.value = s.dataset.suggest; form.elements.exercise.focus(); }
-      if (e.target.closest('[data-cover-clear]')) { form.elements.cover.value = ''; const t = form.querySelector('[data-cover-thumb]'); t.style.backgroundImage = ''; t.innerHTML = icon('image', { size: 20 }); e.target.closest('[data-cover-clear]').hidden = true; }
+      const cc = e.target.closest('[data-cover-clear]');
+      if (cc) { const pk = cc.closest('[data-cover-pick]'), hid = pk.querySelector('input[type=hidden]'); hid.value = ''; const t = pk.querySelector('[data-cover-thumb]'); t.style.backgroundImage = ''; t.innerHTML = icon('image', { size: 20 }); cc.hidden = true; pk.querySelector('label.btn').lastChild.textContent = ' Choose image'; hid.dispatchEvent(new Event('input', { bubbles: true })); }
     });
-    form.querySelector('[data-cover-file]')?.addEventListener('change', async e => {
+    form.querySelectorAll('[data-cover-pick]').forEach(pk => pk.querySelector('[data-cover-file]')?.addEventListener('change', async e => {
       const file = e.target.files[0]; if (!file) return;
       try {
-        const data = await readCover(file, defs.find(d => d.type === 'cover')?.ratio || 3 / 4);
-        form.elements.cover.value = data;
-        const t = form.querySelector('[data-cover-thumb]'); t.style.backgroundImage = `url('${data}')`; t.innerHTML = '';
-        form.querySelector('[data-cover-clear]').hidden = false;
+        const data = await readCover(file, Number(pk.dataset.ratio) || 3 / 4, { maxW: Number(pk.dataset.maxw) || 600, limit: Number(pk.dataset.limit) || 190000 });
+        const hid = pk.querySelector('input[type=hidden]'); hid.value = data;
+        const t = pk.querySelector('[data-cover-thumb]'); t.style.backgroundImage = `url('${data}')`; t.innerHTML = '';
+        pk.querySelector('[data-cover-clear]').hidden = false; pk.querySelector('label.btn').lastChild.textContent = ' Replace image';
+        hid.dispatchEvent(new Event('input', { bubbles: true }));
       } catch (err) { toast(err.message, { type: 'error' }); }
-    });
+      e.target.value = '';
+    }));
 
     form.addEventListener('submit', e => {
       e.preventDefault();

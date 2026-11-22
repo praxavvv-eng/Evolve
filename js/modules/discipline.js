@@ -1,6 +1,7 @@
 /* Discipline: your own challenges. Each challenge keeps its own day records, so a miss in one never touches another.
  * A day with no record is "not recorded", never a miss. Language stays supportive on purpose. */
 import * as State from '../core/state.js';
+import { itemIcon } from '../core/itemicons.js';
 import { registerActions } from '../core/events.js';
 import { setChallengeDay, find } from '../core/records.js';
 import { challengeStats } from '../core/stats.js';
@@ -14,10 +15,10 @@ import { toast } from '../components/toast.js';
 
 function listRow(c) {
   const st = challengeStats(c), done = st.todayStatus === 'done';
-  return `<div class="row ch-row"><a class="ch-ring" href="#/discipline/${esc(c.id)}" aria-label="Open ${esc(c.name)}">${ring({ value: st.progress, size: 46, stroke: 5, label: String(st.current), title: `${c.name}: streak ${st.current}` })}</a>
+  return `<div class="row ch-row"><a class="item-ico" href="#/discipline/${esc(c.id)}" aria-label="Open ${esc(c.name)}">${itemIcon(c, 'challenge', 22)}</a>
     <a class="row-main" href="#/discipline/${esc(c.id)}"><span class="row-title trunc">${esc(c.name)}</span><span class="row-sub">${c.status === 'completed' ? 'Completed' : st.notStarted ? `Starts ${esc(fmtDate(c.startDate))}` : `${plural(st.current, 'day')} streak · target ${c.targetDays}`}</span></a>
     ${!st.notStarted && c.status !== 'completed' ? `<button type="button" class="check-wrap" data-action="ch-today" data-id="${esc(c.id)}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Undo' : 'Mark'} ${esc(c.name)} done today"><span class="check ${done ? 'is-on' : ''}">${icon('check', { size: 16 })}</span></button>` : ''}
-    <span class="row-end">${kebab('challenge', c.id)}</span></div>`;
+    <span class="row-end"><a class="ch-ring" href="#/discipline/${esc(c.id)}" tabindex="-1" aria-hidden="true">${ring({ value: st.progress, size: 38, stroke: 4, label: String(st.current), title: `${c.name}: streak ${st.current}` })}</a>${kebab('challenge', c.id)}</span></div>`;
 }
 
 function renderList() {
@@ -35,7 +36,7 @@ function renderDetail(id) {
   if (!c) return `<div class="card">${emptyState({ icon: 'shield', title: 'Challenge not found', text: 'It may have been deleted.', action: '<a class="btn btn-primary" href="#/discipline">Back to Discipline</a>' })}</div>`;
   const st = challengeStats(c), today = st.todayStatus, running = c.status !== 'completed' && !st.notStarted;
   const stat = (v, l) => `<div class="stat"><b class="t-num">${v}</b><span>${l}</span></div>`;
-  return `<header class="page-head"><div style="min-width:0"><p class="eyebrow">${c.status === 'completed' ? 'Completed' : st.notStarted ? `Starts ${esc(fmtDate(c.startDate))}` : `Day ${Math.min(c.targetDays, Math.max(1, Math.round((new Date(todayStr()) - new Date(c.startDate)) / 864e5) + 1))} of ${c.targetDays}`}</p><h1 class="t-title">${esc(c.name)}</h1></div><div class="page-head-actions">${addBtn('challenge', 'Edit', { cls: 'btn btn-sm', id: c.id })}</div></header>
+  return `<header class="page-head"><div class="row-gap" style="flex-wrap:nowrap;min-width:0"><span class="item-ico is-lg">${itemIcon(c, 'challenge', 28)}</span><div style="min-width:0"><p class="eyebrow">${c.status === 'completed' ? 'Completed' : st.notStarted ? `Starts ${esc(fmtDate(c.startDate))}` : `Day ${Math.min(c.targetDays, Math.max(1, Math.round((new Date(todayStr()) - new Date(c.startDate)) / 864e5) + 1))} of ${c.targetDays}`}</p><h1 class="t-title">${esc(c.name)}</h1></div></div><div class="page-head-actions">${addBtn('challenge', 'Edit', { cls: 'btn btn-sm', id: c.id })}</div></header>
     <div class="stack-lg">
       <section class="ch-hero" style="--i:1">${ring({ value: st.progress, size: 132, stroke: 11, label: String(st.current), sub: st.current === 1 ? 'day' : 'days', title: `Current streak ${st.current} days` })}
         <div class="stat-grid is-3">${stat(st.longest, 'Longest')}${stat(st.done, 'Completed')}${stat(`${Math.round(st.progress)}%`, 'Of target')}</div></section>
