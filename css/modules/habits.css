@@ -81,3 +81,11 @@ button.hm-cell:hover { transform: scale(1.2); }
 .hm-wl { position: sticky; left: 0; z-index: 2; background: color-mix(in srgb, var(--surface) 94%, transparent); padding-right: 4px; }
 .hm.ov .hm-wl { display: none; }
 @media (min-width: 900px) { .hm:not(.ov) { --min: 12px; --gap: 3px; } }
+
+/* Year heatmap: keep the today/selected ring fully visible. The scroll box clips anything outside its padding, so the
+ * ring (up to ~4px outside the cell) gets room on every side, and the left fade no longer eats the weekday labels. */
+.hm-scroll:not(.hm-overview) { padding: 6px 6px 8px 0; }
+.hm-scroll:not(.hm-overview).can-left { --fade-l: 0px; }
+.hm:not(.ov) { min-width: calc(34px + var(--wk, 53) * (var(--min) + var(--gap))); }
+.hm:not(.ov) .hm-grid { grid-template-columns: 30px repeat(var(--wk, 53), minmax(var(--min), 1fr)); }
+.hm:not(.ov) .hm-wl { overflow: hidden; white-space: nowrap; }
